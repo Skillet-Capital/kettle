@@ -8,24 +8,28 @@ import "./lib/Structs.sol";
 import "./OfferController.sol";
 import "./interfaces/IKettle.sol";
 
+import "hardhat/console.sol";
+
 contract Kettle is IKettle, OfferController {
     uint256 private constant _BASIS_POINTS = 10_000;
     uint256 private constant _LIQUIDATION_THRESHOLD = 100_000;
     uint256 private _nextLienId;
 
-    mapping(uint256 => Lien) private _liens;
-    mapping(uint256 => bytes32) private _lienHashes;
+    mapping(uint256 => bytes32) public liens;
 
     /*//////////////////////////////////////////////////
                        GETTERS
     //////////////////////////////////////////////////*/
-    function liens(uint256 lienId) external view returns(Lien memory) {
-        return _liens[lienId];
-    }
-
-    function repayAmount(uint256 lienId) external view returns (uint256) {
-        Lien memory lien = _liens[lienId];
-        return lien.repayAmount;
+    function getRepaymentAmount(
+        uint256 borrowAmount,
+        uint256 rate,
+        uint256 duration
+    ) public pure returns (uint256) {
+        return Helpers.computeCurrentDebt(
+            borrowAmount,
+            rate,
+            duration
+        );
     }
 
     /*//////////////////////////////////////////////////
@@ -41,7 +45,10 @@ contract Kettle is IKettle, OfferController {
         for (uint256 i=0; i<fees.length; i++) {
             uint256 feeAmount = Helpers.computeFeeAmount(loanAmount, fees[i].rate);
             currency.transferFrom(lender, fees[i].recipient, feeAmount);
-            totalFees += feeAmount;
+
+            unchecked {
+                totalFees += feeAmount;   
+            }
         }
     }
 
@@ -72,7 +79,9 @@ contract Kettle is IKettle, OfferController {
         uint256 totalFees = payFees(offer.currency, offer.lender, loanAmount, offer.fees);
 
         /* Transfer loan to borrower. */
-        offer.currency.transferFrom(offer.lender, msg.sender, loanAmount - totalFees);
+        unchecked {
+            offer.currency.transferFrom(offer.lender, msg.sender, loanAmount - totalFees);
+        }
     }
 
     /**
@@ -97,7 +106,6 @@ contract Kettle is IKettle, OfferController {
             tokenId: collateralTokenId,
             currency: offer.currency,
             borrowAmount: loanAmount,
-            repayAmount: Helpers.computeCurrentDebt(loanAmount, offer.rate, offer.duration),
             startTime: block.timestamp,
             duration: offer.duration,
             rate: offer.rate
@@ -105,9 +113,7 @@ contract Kettle is IKettle, OfferController {
 
         /* Create lien. */
         unchecked {
-            lienId = _nextLienId++;
-            _liens[lienId] = lien;
-            _lienHashes[lienId] = keccak256(abi.encode(lien));
+            liens[lienId = _nextLienId++] = keccak256(abi.encode(lien));
         }
 
         /* Take the loan offer. */
@@ -141,14 +147,14 @@ contract Kettle is IKettle, OfferController {
      * @dev Does not transfer assets
      * @param lien Lien preimage
      * @param lienId Lien id
-     * @return debt Current amount of debt owed on the lien
+     * @return repayAmount Current amount of debt owed on the lien
      */
-    function _repay(Lien calldata lien, uint256 lienId) internal returns (uint256) {
-        delete _liens[lienId];
-        delete _lienHashes[lienId];
+    function _repay(Lien calldata lien, uint256 lienId) internal returns (uint256 repayAmount) {
+        repayAmount = getRepaymentAmount(lien.borrowAmount, lien.rate, lien.duration);
+        
+        delete liens[lienId];
 
-        emit Repay(lienId, address(lien.collection), lien.repayAmount);
-        return lien.repayAmount;
+        emit Repay(lienId, address(lien.collection), repayAmount);
     }
 
     /*//////////////////////////////////////////////////
@@ -182,23 +188,30 @@ contract Kettle is IKettle, OfferController {
             revert InvalidRefinanceDuration();
         }
 
-        /* Refinance initial loan to new loan */
+        /* Refinance initial loan to new loan (loanAmount must be within lender range) */
         _refinance(lien, lienId, loanAmount, offer, signature);
 
         /* Transfer fees */
         uint256 totalFees = payFees(offer.currency, offer.lender, loanAmount, offer.fees);
+        unchecked {
+            loanAmount -= totalFees;
+        }
 
         /* Net loan amount must be greater than repay amount */
-        if (loanAmount - totalFees < lien.repayAmount) {
+        uint256 repayAmount = getRepaymentAmount(lien.borrowAmount, lien.rate, lien.duration);
+
+        if (loanAmount < repayAmount) {
             revert InsufficientRefinance();
         }
 
         /* Repay initial loan */
-        offer.currency.transferFrom(offer.lender, lien.lender, lien.repayAmount);
+        offer.currency.transferFrom(offer.lender, lien.lender, repayAmount);
 
         /* Transfer difference to borrower */
-        if (loanAmount - totalFees - lien.repayAmount > 0) {
-            offer.currency.transferFrom(offer.lender, lien.borrower, loanAmount - totalFees - lien.repayAmount);
+        if (loanAmount - repayAmount > 0) {
+            unchecked {
+                offer.currency.transferFrom(offer.lender, lien.borrower, loanAmount - repayAmount);
+            }
         }
     }
 
@@ -212,22 +225,30 @@ contract Kettle is IKettle, OfferController {
         if (msg.sender != lien.borrower) {
             revert Unauthorized();
         }
-
+        
+        /* Refinance initial loan to new loan (loanAmount must be within lender range) */
         _refinance(lien, lienId, loanAmount, offer, signature);
 
-        uint256 _repayAmount = lien.repayAmount;
+        uint256 repayAmount = getRepaymentAmount(lien.borrowAmount, lien.rate, lien.duration);
 
         /* Transfer fees */
         uint256 totalFees = payFees(offer.currency, offer.lender, loanAmount, offer.fees);
+        unchecked {
+            loanAmount -= totalFees;
+        }
 
-        if (loanAmount - totalFees >= _repayAmount) {
+        if (loanAmount >= repayAmount) {
             /* If new loan is more than the previous, repay the initial loan and send the remaining to the borrower. */
-            offer.currency.transferFrom(offer.lender, lien.lender, _repayAmount);
-            offer.currency.transferFrom(offer.lender, lien.borrower, loanAmount - totalFees - _repayAmount);
+            offer.currency.transferFrom(offer.lender, lien.lender, repayAmount);
+            unchecked {
+                offer.currency.transferFrom(offer.lender, lien.borrower, loanAmount - repayAmount);
+            }
         } else {
             /* If new loan is less than the previous, borrower must supply the difference to repay the initial loan. */
             offer.currency.transferFrom(offer.lender, lien.lender, loanAmount);
-            offer.currency.transferFrom(lien.borrower, lien.lender, _repayAmount - loanAmount - totalFees);
+            unchecked {
+                offer.currency.transferFrom(lien.borrower, lien.lender, repayAmount - loanAmount);
+            }
         }
     }
 
@@ -254,15 +275,13 @@ contract Kettle is IKettle, OfferController {
             tokenId: lien.tokenId,
             currency: lien.currency,
             borrowAmount: loanAmount,
-            repayAmount: Helpers.computeCurrentDebt(loanAmount, offer.rate, offer.duration),
             startTime: block.timestamp,
             duration: offer.duration,
             rate: offer.rate
         });
 
         unchecked {
-            _lienHashes[lienId] = keccak256(abi.encode(newLien));
-            _liens[lienId] = newLien;
+            liens[lienId]= keccak256(abi.encode(newLien));
         }
 
         /* Take the loan offer. */
@@ -304,8 +323,7 @@ contract Kettle is IKettle, OfferController {
 
             /* Check that the auction has ended and lien is defaulted. */
             if (_lienIsDefaulted(lien)) {
-                delete _liens[lienId];
-                delete _lienHashes[lienId];
+                delete liens[lienId];
 
                 /* Seize collateral to lender. */
                 lien.collection.safeTransferFrom(address(this), lien.lender, lien.tokenId);
@@ -349,7 +367,7 @@ contract Kettle is IKettle, OfferController {
     }
 
     function _validateLien(Lien calldata lien, uint256 lienId) internal view returns (bool) {
-        return _lienHashes[lienId] == keccak256(abi.encode(lien));
+        return liens[lienId] == keccak256(abi.encode(lien));
     }
 
     function _lienIsDefaulted(Lien calldata lien) internal view returns (bool) {

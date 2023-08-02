@@ -57,15 +57,15 @@ abstract contract OfferController is IOfferController, Signatures {
         emit LoanOfferTaken(
             hash,
             lienId,
-            address(offer.collection),
             lien.lender,
             lien.borrower,
-            address(offer.currency),
-            lien.borrowAmount,
-            lien.repayAmount,
-            lien.rate,
+            address(lien.currency),
+            address(lien.collection),
             lien.tokenId,
-            lien.duration
+            lien.borrowAmount,
+            lien.rate,
+            lien.duration,
+            lien.startTime
         );
     }
 

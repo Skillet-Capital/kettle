@@ -7,7 +7,6 @@ export interface Lien {
   currency: string;
   tokenId: BigNumberish;
   borrowAmount: BigNumberish;
-  repayAmount: BigNumberish;
   startTime: BigNumberish;
   duration: BigNumberish;
   rate: BigNumberish;

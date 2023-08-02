@@ -16,7 +16,6 @@ struct Lien {
   uint256 tokenId;
   ERC20 currency;
   uint256 borrowAmount;
-  uint256 repayAmount;
   uint256 duration;
   uint256 rate;
   uint256 startTime;

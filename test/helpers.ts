@@ -11,7 +11,7 @@ export async function getLatestTimestamp(): Promise<number> {
 }
 
 export function getFee(
-  rate: BigNumberish,
+  rate: number,
   recipient: string
 ): Fee {
   return {
@@ -57,7 +57,6 @@ export function formatLien(
     currency: lien.currency,
     tokenId: lien.tokenId,
     borrowAmount: lien.borrowAmount,
-    repayAmount: lien.repayAmount,
     startTime: lien.startTime,
     duration: lien.duration,
     rate: lien.rate

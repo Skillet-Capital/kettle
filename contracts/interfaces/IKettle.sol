@@ -22,7 +22,13 @@ interface IKettle is IOfferController {
       uint256 newRate
     );
 
-    function liens(uint256 lienId) external view returns (Lien memory);
+    function liens(uint256 lienId) external view returns (bytes32 lienHash);
+
+    function getRepaymentAmount(
+      uint256 borrowAmount,
+      uint256 rate,
+      uint256 duration
+    ) external returns (uint256 repayAmount);
 
     /*//////////////////////////////////////////////////
                     BORROW FLOWS
