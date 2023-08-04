@@ -57,6 +57,41 @@ contract Kettle is IKettle, OfferController {
     //////////////////////////////////////////////////*/
 
     /**
+     * @notice Verifies and starts multiple liens against loan offers; then transfers loan and collateral assets
+     * @param loanOffers Loan offers
+     * @param fullfillments Loan offer fullfillments
+     * @return lienIds array of lienIds
+     */
+    function borrowBatch(
+      LoanInput[] calldata loanOffers,
+      LoanFullfillment[] calldata fullfillments
+    ) external returns (uint256[] memory lienIds) {
+      lienIds = new uint256[](fullfillments.length);
+
+      for (uint256 i=0; i<fullfillments.length; i++) {
+        LoanFullfillment calldata fullfillment = fullfillments[i];
+        LoanInput calldata loan = loanOffers[fullfillment.loanIndex];
+
+        lienIds[i] = _borrow(
+          loan.offer,
+          loan.signature,
+          fullfillment.loanAmount,
+          fullfillment.collateralIdentifier
+        );
+
+        loan.offer.collection.safeTransferFrom(msg.sender, address(this), fullfillment.collateralIdentifier);
+
+        /* Transfer fees from lender */
+        uint256 totalFees = payFees(loan.offer.currency, loan.offer.lender, fullfillment.loanAmount, loan.offer.fees);
+
+        /* Transfer loan to borrower. */
+        unchecked {
+            loan.offer.currency.transferFrom(loan.offer.lender, msg.sender, fullfillment.loanAmount - totalFees);
+        }
+      }
+    }
+
+    /**
      * @notice Verifies and takes loan offer; then transfers loan and collateral assets
      * @param offer Loan offer
      * @param signature Lender offer signature
@@ -123,6 +158,25 @@ contract Kettle is IKettle, OfferController {
     /*//////////////////////////////////////////////////
                     REPAY FLOWS
     //////////////////////////////////////////////////*/
+
+    /**
+      * @notice Repays loans in batch
+      * @param repayments Loan repayments
+     */
+    function repayBatch(
+        RepayFullfillment[] calldata repayments
+    ) external validateLiens(repayments) {
+      for (uint256 i=0; i<repayments.length; i++) {
+        RepayFullfillment calldata repayment = repayments[i];
+        uint256 _repayAmount =_repay(repayment.lien, repayment.lienId);
+
+        /* Return collateral to borrower. */
+        repayment.lien.collection.safeTransferFrom(address(this), repayment.lien.borrower, repayment.lien.tokenId);
+
+        /* Repay loan to lender. */
+        repayment.lien.currency.transferFrom(msg.sender, repayment.lien.lender, _repayAmount);
+      }
+    }
 
     /**
      * @notice Repays loan and retrieves collateral
@@ -225,7 +279,7 @@ contract Kettle is IKettle, OfferController {
         if (msg.sender != lien.borrower) {
             revert Unauthorized();
         }
-        
+
         /* Refinance initial loan to new loan (loanAmount must be within lender range) */
         _refinance(lien, lienId, loanAmount, offer, signature);
 
@@ -353,6 +407,24 @@ contract Kettle is IKettle, OfferController {
     modifier validateLien(Lien calldata lien, uint256 lienId) {
         if (!_validateLien(lien, lienId)) {
             revert InvalidLien();
+        }
+
+        _;
+    }
+
+    modifier validateLiens(RepayFullfillment[] calldata repayments) {
+        uint256 length = repayments.length;
+        for (uint256 i; i < length; ) {
+            Lien calldata lien = repayments[i].lien;
+            uint256 lienId = repayments[i].lienId;
+
+            if (!_validateLien(lien, lienId)) {
+                revert InvalidLien();
+            }
+
+            unchecked {
+                ++i;
+            }
         }
 
         _;

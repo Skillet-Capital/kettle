@@ -1,6 +1,7 @@
 import { BigNumberish } from "ethers";
 
 export interface Lien {
+  lienId: BigNumberish;
   lender: string;
   borrower: string;
   collection: string;

@@ -2,8 +2,8 @@ import { BaseWallet, Addressable, BigNumberish } from "ethers";
 import { Fee, LoanOffer, Lien } from "../types";
 
 import { ethers } from "hardhat";
-import { hexlify, randomBytes } from "ethers";
-import { LienStructOutput } from "../typechain-types/contracts/Kettle";
+import { hexlify, randomBytes, Result } from "ethers";
+import { LienStructOutput, LoanOfferTakenEvent } from "../typechain-types/contracts/Kettle";
 
 export async function getLatestTimestamp(): Promise<number> {
   const block = await ethers.provider.getBlock("latest");
@@ -48,9 +48,10 @@ export function getLoanOffer(
 }
 
 export function formatLien(
-  lien: LienStructOutput
+  lien: Result
 ): Lien {
   return {
+    lienId: lien.lienId,
     lender: lien.lender,
     borrower: lien.borrower,
     collection: lien.collection,

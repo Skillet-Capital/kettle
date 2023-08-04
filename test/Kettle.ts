@@ -91,6 +91,166 @@ describe("Kettle", function () {
       blockTimestamp = await getLatestTimestamp();
     });
 
+    describe("Borrow Batch -> Repay Batch", () => {
+      it("should start multiple loans from single offer", async () => {
+        loanAmount = ethers.parseEther("10");
+
+        loanOffer = getLoanOffer(
+          lenderAddress,
+          testErc721Address,
+          testErc20Address,
+          loanAmount,
+          0,
+          loanAmount,
+          DAY_SECONDS * 7,
+          "1000",
+          blockTimestamp + DAY_SECONDS * 7,
+          [
+            getFee(250, protocolFeeCollectorAddress),
+            getFee(100, devFeeCollectorAddress)
+          ]
+        );
+        
+        /* mint multiple ERC721 tokens */
+        await testErc721.mint(borrowerAddress, 2);
+        await testErc721.mint(borrowerAddress, 3);
+
+        const fullfillments = [
+          {
+            loanIndex: 0,
+            loanAmount: ethers.parseEther("5"),
+            collateralIdentifier: 1
+          },
+          {
+            loanIndex: 0,
+            loanAmount: ethers.parseEther("2"),
+            collateralIdentifier: 2
+          },
+          {
+            loanIndex: 0,
+            loanAmount: ethers.parseEther("3"),
+            collateralIdentifier: 3
+          }
+        ];
+
+        /** Start Multiple Loans */
+        const txn = await kettle.connect(borrower).borrowBatch(
+          [{
+            offer: loanOffer,
+            signature: "0x"
+          }],
+          fullfillments
+        );
+
+        const receipt = await txn.wait();
+        const liens = receipt!.logs
+          .filter((log) => log.address === kettleAddress)
+          .map((log) => kettle.interface.decodeEventLog("LoanOfferTaken", log.data, log.topics))
+          .map((lien) => formatLien(lien))
+
+        /** Repay Multiple Loans */
+        const totalRepaymentAmount = await Promise.all(
+          liens.map((lien) => kettle.getRepaymentAmount(lien.borrowAmount, lien.rate, lien.duration))
+        ).then((repayments) => repayments.reduce((a, b) => BigInt(a) + BigInt(b), BigInt(0)));
+
+        await testErc20.mint(borrowerAddress, totalRepaymentAmount - await testErc20.balanceOf(borrowerAddress));
+        await kettle.connect(borrower).repayBatch(liens.map((lien) => ({ lien, lienId: lien.lienId })));
+      })
+
+      it("should start multiple loans from multiple offers", async () => {
+        await testErc20.mint(await lender.getAddress(), ethers.parseEther("10"));
+        loanAmount = ethers.parseEther("10");
+
+        const loanOffer1 = getLoanOffer(
+          lenderAddress,
+          testErc721Address,
+          testErc20Address,
+          loanAmount,
+          0,
+          loanAmount,
+          DAY_SECONDS * 7,
+          "1000",
+          blockTimestamp + DAY_SECONDS * 7,
+          [
+            getFee(250, protocolFeeCollectorAddress),
+            getFee(100, devFeeCollectorAddress)
+          ]
+        );
+
+        const loanOffer2 = getLoanOffer(
+          lenderAddress,
+          testErc721Address,
+          testErc20Address,
+          loanAmount,
+          0,
+          loanAmount,
+          DAY_SECONDS * 7,
+          "1000",
+          blockTimestamp + DAY_SECONDS * 7,
+          [
+            getFee(250, protocolFeeCollectorAddress),
+            getFee(100, devFeeCollectorAddress)
+          ]
+        );
+        
+        /* mint multiple ERC721 tokens */
+        await testErc721.mint(borrowerAddress, 2);
+        await testErc721.mint(borrowerAddress, 3);
+        await testErc721.mint(borrowerAddress, 4);
+        await testErc721.mint(borrowerAddress, 5);
+        await testErc721.mint(borrowerAddress, 6);
+
+        const loanOffers = [
+          {
+            offer: loanOffer1,
+            signature: "0x"
+          },
+          {
+            offer: loanOffer2,
+            signature: "0x"
+          }
+        ]
+
+        const fullfillments = [
+          {
+            loanIndex: 0,
+            loanAmount: ethers.parseEther("5"),
+            collateralIdentifier: 1
+          },
+          {
+            loanIndex: 0,
+            loanAmount: ethers.parseEther("2"),
+            collateralIdentifier: 2
+          },
+          {
+            loanIndex: 0,
+            loanAmount: ethers.parseEther("3"),
+            collateralIdentifier: 3
+          },
+          {
+            loanIndex: 1,
+            loanAmount: ethers.parseEther("5"),
+            collateralIdentifier: 4
+          },
+          {
+            loanIndex: 1,
+            loanAmount: ethers.parseEther("2"),
+            collateralIdentifier: 5
+          },
+          {
+            loanIndex: 1,
+            loanAmount: ethers.parseEther("3"),
+            collateralIdentifier: 6
+          }
+        ];
+
+        const txn = await kettle.connect(borrower).borrowBatch(
+          loanOffers,
+          fullfillments
+        );
+      })
+    })
+
     describe("Borrow -> Repay", () => {
 
       beforeEach(async () => {
@@ -450,225 +610,11 @@ describe("Kettle", function () {
     });
   });
 });
-    // it("should start loan (partial amounts)", async function () {
-    //   const loanOffer = getLoanOffer(
-    //     await lender.getAddress(),
-    //     await testErc721.getAddress(),
-    //     await testErc20.getAddress(),
-    //     ethers.parseEther("1"),
-    //     ethers.parseEther("0"),
-    //     ethers.parseEther("1"),
-    //     DAY_SECONDS * 7,
-    //     1000,
-    //     await getLatestTimestamp() + DAY_SECONDS * 7,
-    //     [
-    //       getFee(250, await protocolFeeCollector.getAddress()),
-    //       getFee(100, await devFeeCollector.getAddress())
-    //     ]
-    //   );
-
-    //   await kettle.connect(borrower).borrow(
-    //     loanOffer, 
-    //     "0x",
-    //     ethers.parseEther("0.6"), 
-    //     1
-    //   );
-      
-    //   expect(await testErc20.balanceOf(await protocolFeeCollector.getAddress())).to.equal(ethers.parseEther("0.6") * BigInt(250) / BigInt(10000));
-    //   expect(await testErc20.balanceOf(await devFeeCollector.getAddress())).to.equal(ethers.parseEther("0.6") * BigInt(100) / BigInt(10000));
-    //   expect(await testErc20.balanceOf(await borrower.getAddress())).to.equal(ethers.parseEther("0.6") * BigInt(9650) / BigInt(10000));
-    //   expect(await testErc721.ownerOf(1)).to.equal(await kettle.getAddress());
-
-    //   await testErc721.mint(await borrower.getAddress(), 2);
-    //   await kettle.connect(borrower).borrow(
-    //     loanOffer,
-    //     "0x",
-    //     ethers.parseEther("0.4"),
-    //     2
-    //   )
-
-    //   expect(await testErc20.balanceOf(await protocolFeeCollector.getAddress())).to.equal(ethers.parseEther("1") * BigInt(250) / BigInt(10000));
-    //   expect(await testErc20.balanceOf(await devFeeCollector.getAddress())).to.equal(ethers.parseEther("1") * BigInt(100) / BigInt(10000));
-    //   expect(await testErc20.balanceOf(await borrower.getAddress())).to.equal(ethers.parseEther("1") * BigInt(9650) / BigInt(10000));
-    //   expect(await testErc721.ownerOf(2)).to.equal(await kettle.getAddress());
-    // });
-
-    // it('should throw error if loan offer is expired', async function () {
-    //   const loanOffer = getLoanOffer(
-    //     await lender.getAddress(),
-    //     await testErc721.getAddress(),
-    //     await testErc20.getAddress(),
-    //     ethers.parseEther("1"),
-    //     ethers.parseEther("0"),
-    //     ethers.parseEther("1"),
-    //     DAY_SECONDS * 7,
-    //     1000,
-    //     await getLatestTimestamp() + DAY_SECONDS * 7,
-    //     [
-    //       getFee(250, await protocolFeeCollector.getAddress()),
-    //       getFee(100, await devFeeCollector.getAddress())
-    //     ]
-    //   );
-
-    //   await time.setNextBlockTimestamp(await getLatestTimestamp() + DAY_SECONDS * 7 + 1);
-
-    //   await expect(kettle.connect(borrower).borrow(
-    //     loanOffer, 
-    //     "0x", 
-    //     ethers.parseEther("1").toString(), 
-    //     1
-    //   )).to.be.revertedWithCustomError(kettle, "OfferExpired")
-    // })
-
-    // it('should throw error if loan offer is cancelled', async function () {
-    //   const loanOffer = getLoanOffer(
-    //     await lender.getAddress(),
-    //     await testErc721.getAddress(),
-    //     await testErc20.getAddress(),
-    //     ethers.parseEther("1"),
-    //     ethers.parseEther("0"),
-    //     ethers.parseEther("1"),
-    //     DAY_SECONDS * 7,
-    //     1000,
-    //     await getLatestTimestamp() + DAY_SECONDS * 7,
-    //     [
-    //       getFee(250, await protocolFeeCollector.getAddress()),
-    //       getFee(100, await devFeeCollector.getAddress())
-    //     ]
-    //   );
-
-    //   // cancel offer
-    //   await kettle.connect(lender).cancelOffer(loanOffer.salt);
-
-    //   await expect(kettle.connect(borrower).borrow(
-    //     loanOffer, 
-    //     "0x", 
-    //     ethers.parseEther("1").toString(), 
-    //     1
-    //   )).to.be.revertedWithCustomError(kettle, "OfferUnavailable")
-    // })
-
-    // it('should throw error if loan amount is higher than max amount', async function () {
-    //   const loanOffer = getLoanOffer(
-    //     await lender.getAddress(),
-    //     await testErc721.getAddress(),
-    //     await testErc20.getAddress(),
-    //     ethers.parseEther("1"),
-    //     ethers.parseEther("0"),
-    //     ethers.parseEther("1"),
-    //     DAY_SECONDS * 7,
-    //     1000,
-    //     await getLatestTimestamp() + DAY_SECONDS * 7,
-    //     [
-    //       getFee(250, await protocolFeeCollector.getAddress()),
-    //       getFee(100, await devFeeCollector.getAddress())
-    //     ]
-    //   );
-
-    //   await expect(kettle.connect(borrower).borrow(
-    //     loanOffer, 
-    //     "0x", 
-    //     ethers.parseEther("1.5").toString(), 
-    //     1
-    //   )).to.be.revertedWithCustomError(kettle, "InvalidLoanAmount")
-    // })
-
-    // it('should throw error if loan amount is lower than min amount', async function () {
-    //   const loanOffer = getLoanOffer(
-    //     await lender.getAddress(),
-    //     await testErc721.getAddress(),
-    //     await testErc20.getAddress(),
-    //     ethers.parseEther("1"),
-    //     ethers.parseEther("0.5"),
-    //     ethers.parseEther("1"),
-    //     DAY_SECONDS * 7,
-    //     1000,
-    //     await getLatestTimestamp() + DAY_SECONDS * 7,
-    //     [
-    //       getFee(250, await protocolFeeCollector.getAddress()),
-    //       getFee(100, await devFeeCollector.getAddress())
-    //     ]
-    //   );
-
-    //   await expect(kettle.connect(borrower).borrow(
-    //     loanOffer, 
-    //     "0x", 
-    //     ethers.parseEther("0.01").toString(), 
-    //     1
-    //   )).to.be.revertedWithCustomError(kettle, "InvalidLoanAmount")
-    // });
-
-    // it('should throw error if rate is too high', async function () {
-    //   const loanOffer = getLoanOffer(
-    //     await lender.getAddress(),
-    //     await testErc721.getAddress(),
-    //     await testErc20.getAddress(),
-    //     ethers.parseEther("1"),
-    //     ethers.parseEther("0"),
-    //     ethers.parseEther("1"),
-    //     DAY_SECONDS * 7,
-    //     100_001,
-    //     await getLatestTimestamp() + DAY_SECONDS * 7,
-    //     [
-    //       getFee(250, await protocolFeeCollector.getAddress()),
-    //       getFee(100, await devFeeCollector.getAddress())
-    //     ]
-    //   );
-
-    //   await expect(kettle.connect(borrower).borrow(
-    //     loanOffer, 
-    //     "0x", 
-    //     ethers.parseEther("1").toString(), 
-    //     1
-    //   )).to.be.revertedWithCustomError(kettle, "RateTooHigh")
-    // })
-
-    // it('should throw error if insufficient balance', async function () {
-    //   const loanOffer1 = getLoanOffer(
-    //     await lender.getAddress(),
-    //     await testErc721.getAddress(),
-    //     await testErc20.getAddress(),
-    //     ethers.parseEther("1"),
-    //     ethers.parseEther("0"),
-    //     ethers.parseEther("1"),
-    //     DAY_SECONDS * 7,
-    //     100_000,
-    //     await getLatestTimestamp() + DAY_SECONDS * 7,
-    //     [
-    //       getFee(250, await protocolFeeCollector.getAddress()),
-    //       getFee(100, await devFeeCollector.getAddress())
-    //     ]
-    //   );
-  
-    //   await kettle.connect(borrower).borrow(
-    //     loanOffer1, 
-    //     "0x", 
-    //     ethers.parseEther("0.6").toString(), 
-    //     1
-    //   );
-
-    //   await testErc721.mint(await borrower.getAddress(), 2);
-    //   await expect(kettle.connect(borrower).borrow(
-    //     loanOffer1, 
-    //     "0x", 
-    //     ethers.parseEther("0.6").toString(), 
-    //     2
-    //   )).to.be.revertedWithCustomError(kettle, "InsufficientOffer")
-    // })
-//   });
-// });
-
-//   describe("Repay", function () {
-
-//   })
-// });
 
 //   describe.skip("Signature", function () {
 //     it("Should sign an offer", async function () {
 //       const [signer] = await ethers.getSigners();
 //       console.log("Signer:", signer.address)
-
-//       const { kettle } = await loadFixture(deployKettle);
 
 //       const collection = ethers.Wallet.createRandom();
 //       const currency = ethers.Wallet.createRandom();

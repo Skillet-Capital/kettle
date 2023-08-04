@@ -40,6 +40,17 @@ struct LoanInput {
   bytes signature;
 }
 
+struct LoanFullfillment {
+  uint256 loanIndex;
+  uint256 loanAmount;
+  uint256 collateralIdentifier;
+}
+
+struct RepayFullfillment {
+  Lien lien;
+  uint256 lienId;
+}
+
 struct Fee {
   uint16 rate;
   address recipient;
