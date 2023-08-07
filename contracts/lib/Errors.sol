@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSL 1.1 - Blend (c) Non Fungible Trading Ltd.
 pragma solidity 0.8.19;
 
-// Blend
+// Kettle
 error Unauthorized();
 error InvalidLoan();
 error InvalidLien();
@@ -20,6 +20,10 @@ error CollectionsDoNotMatch();
 error CurrenciesDoNotMatch();
 error InsufficientRefinance();
 error InvalidAuctionDuration();
+
+// CollateralVerifier
+error InvalidCollateral();
+error InvalidCollateralCriteria();
 
 // OfferController
 error OfferExpired();

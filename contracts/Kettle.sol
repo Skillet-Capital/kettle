@@ -4,6 +4,8 @@ pragma solidity 0.8.19;
 import "solmate/src/tokens/ERC20.sol";
 
 import "./Helpers.sol";
+import "./CollateralVerifier.sol";
+
 import "./lib/Structs.sol";
 import "./OfferController.sol";
 import "./interfaces/IKettle.sol";
@@ -69,14 +71,22 @@ contract Kettle is IKettle, OfferController {
       lienIds = new uint256[](fullfillments.length);
 
       for (uint256 i=0; i<fullfillments.length; i++) {
+        
         LoanFullfillment calldata fullfillment = fullfillments[i];
         LoanInput calldata loan = loanOffers[fullfillment.loanIndex];
 
+        CollateralVerifier.verifyCollateral(
+            loan.offer.collateralType,
+            loan.offer.collateralIdentifier,
+            fullfillment.collateralIdentifier,
+            fullfillment.proof
+        );
+
         lienIds[i] = _borrow(
-          loan.offer,
-          loan.signature,
-          fullfillment.loanAmount,
-          fullfillment.collateralIdentifier
+            loan.offer,
+            loan.signature,
+            fullfillment.loanAmount,
+            fullfillment.collateralIdentifier
         );
 
         loan.offer.collection.safeTransferFrom(msg.sender, address(this), fullfillment.collateralIdentifier);
@@ -103,8 +113,17 @@ contract Kettle is IKettle, OfferController {
         LoanOffer calldata offer,
         bytes calldata signature,
         uint256 loanAmount,
-        uint256 collateralTokenId
+        uint256 collateralTokenId,
+        bytes32[] calldata proof
     ) external returns (uint256 lienId) {
+
+        CollateralVerifier.verifyCollateral(
+            offer.collateralType,
+            offer.collateralIdentifier,
+            collateralTokenId,
+            proof
+        );
+
         lienId = _borrow(offer, signature, loanAmount, collateralTokenId);
 
         /* Lock collateral token. */
