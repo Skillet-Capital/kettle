@@ -12,7 +12,7 @@ import "./interfaces/IKettle.sol";
 
 import "hardhat/console.sol";
 
-contract Kettle is IKettle, OfferController, CollateralVerifier {
+contract Kettle is IKettle, OfferController {
     uint256 private constant _BASIS_POINTS = 10_000;
     uint256 private constant _LIQUIDATION_THRESHOLD = 100_000;
     uint256 private _nextLienId;
@@ -75,11 +75,18 @@ contract Kettle is IKettle, OfferController, CollateralVerifier {
         LoanFullfillment calldata fullfillment = fullfillments[i];
         LoanInput calldata loan = loanOffers[fullfillment.loanIndex];
 
+        CollateralVerifier.verifyCollateral(
+            loan.offer.collateralType,
+            loan.offer.collateralIdentifier,
+            fullfillment.collateralIdentifier,
+            fullfillment.proof
+        );
+
         lienIds[i] = _borrow(
-          loan.offer,
-          loan.signature,
-          fullfillment.loanAmount,
-          fullfillment.collateralIdentifier
+            loan.offer,
+            loan.signature,
+            fullfillment.loanAmount,
+            fullfillment.collateralIdentifier
         );
 
         loan.offer.collection.safeTransferFrom(msg.sender, address(this), fullfillment.collateralIdentifier);
@@ -110,7 +117,7 @@ contract Kettle is IKettle, OfferController, CollateralVerifier {
         bytes32[] calldata proof
     ) external returns (uint256 lienId) {
 
-        verifyCollateral(
+        CollateralVerifier.verifyCollateral(
             offer.collateralType,
             offer.collateralIdentifier,
             collateralTokenId,
