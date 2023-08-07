@@ -1,9 +1,10 @@
-// SPDX-License-Identifier: BSL 1.1 - Blend (c) Non Fungible Trading Ltd.
+// SPDX-License-Identifier: Skillet
 pragma solidity 0.8.19;
 
 import "./lib/Structs.sol";
+import "./lib/Errors.sol";
 
-contract CollateralVerifier {
+library CollateralVerifier {
 
   function verifyCollateral(
     CollateralType collateralType,
@@ -12,20 +13,23 @@ contract CollateralVerifier {
     bytes32[] calldata proof
   ) public pure {
     if (collateralType == CollateralType.ERC721 || collateralType == CollateralType.ERC1155) {
-      require (tokenId == collateralRoot, "CollateralVerifier: invalid collateral");
+      if (tokenId != collateralRoot) {
+        revert InvalidCollateral();
+      }
       return;
     }
 
     bytes32 computedRoot = processProofCalldata(proof, bytes32(tokenId));
-    require(computedRoot == bytes32(collateralRoot), "CollateralVerifier: invalid collateral with criteria");
-    return;
+    if (computedRoot != bytes32(collateralRoot)) {
+      revert InvalidCollateralCriteria();
+    }
   }
 
   function processProofCalldata(
     bytes32[] calldata proof,
     bytes32 leaf
   ) internal pure returns (bytes32) {
-      bytes32 computedHash = leaf;
+      bytes32 computedHash = keccak256(abi.encode(leaf));
       for (uint256 i = 0; i < proof.length; i++) {
           computedHash = _hashPair(computedHash, proof[i]);
       }
