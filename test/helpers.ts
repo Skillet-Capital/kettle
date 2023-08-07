@@ -1,9 +1,13 @@
-import { BaseWallet, Addressable, BigNumberish } from "ethers";
+import { MerkleTree } from 'merkletreejs';
+
 import { Fee, LoanOffer, Lien } from "../types";
 
 import { ethers } from "hardhat";
-import { hexlify, randomBytes, Result } from "ethers";
-import { LienStructOutput, LoanOfferTakenEvent } from "../typechain-types/contracts/Kettle";
+
+import { hexlify } from '@ethersproject/bytes';
+import { keccak256 } from '@ethersproject/keccak256';
+import { randomBytes } from '@ethersproject/random';
+import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 
 export async function getLatestTimestamp(): Promise<number> {
   const block = await ethers.provider.getBlock("latest");
@@ -21,6 +25,7 @@ export function getFee(
 }
 
 export function getLoanOffer(
+  collateralIdentifier: BigNumberish,
   lender: string,
   collection: string,
   currency: string,
@@ -30,12 +35,15 @@ export function getLoanOffer(
   duration: BigNumberish,
   rate: BigNumberish,
   expiration: BigNumberish,
-  fees: Fee[]
+  fees: Fee[],
+  collateralType?: number
 ): LoanOffer {
   return {
     lender,
     collection,
     currency,
+    collateralType: collateralType ?? 0,
+    collateralIdentifier,
     totalAmount: totalAmount.toString(),
     minAmount: minAmount.toString(),
     maxAmount: maxAmount.toString(),
@@ -48,7 +56,7 @@ export function getLoanOffer(
 }
 
 export function formatLien(
-  lien: Result
+  lien
 ): Lien {
   return {
     lienId: lien.lienId,
@@ -63,3 +71,38 @@ export function formatLien(
     rate: lien.rate
   }
 }
+
+function generateMerkleRootForCollection(tokenIds: BigNumberish[]): BigNumberish {
+  const hashIdentifier = (identifier: BigNumberish) => keccak256(
+    Buffer.from(
+      BigNumber.from(identifier).toHexString().slice(2).padStart(64, "0"),
+      "hex"
+    )
+  );
+
+  const tree = new MerkleTree(
+    tokenIds.map(hashIdentifier), keccak256, {
+      sort: true
+    }
+  );
+
+  return tree.getHexRoot();
+}
+
+function generateMerkleProofForToken(tokenIds: BigNumberish[], token: BigNumberish): BigNumberish[] {
+  const hashIdentifier = (identifier: BigNumberish) => keccak256(
+    Buffer.from(
+      BigNumber.from(identifier).toHexString().slice(2).padStart(64, "0"),
+      "hex"
+    )
+  );
+
+  const tree = new MerkleTree(
+    tokenIds.map(hashIdentifier), keccak256, {
+      sort: true
+    }
+  );
+
+  const identifier = hashIdentifier(token);
+  return tree.getHexProof(identifier);
+} 

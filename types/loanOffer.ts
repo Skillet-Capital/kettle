@@ -9,6 +9,8 @@ export interface LoanOffer {
   lender: string;
   collection: string;
   currency: string;
+  collateralType: number;
+  collateralIdentifier: BigNumberish;
   totalAmount: BigNumberish;
   minAmount: BigNumberish;
   maxAmount: BigNumberish;

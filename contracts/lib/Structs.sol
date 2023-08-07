@@ -4,6 +4,13 @@ pragma solidity 0.8.19;
 import "solmate/src/tokens/ERC721.sol";
 import "solmate/src/tokens/ERC20.sol";
 
+enum CollateralType {
+  ERC721,
+  ERC1155,
+  ERC721_WITH_CRITERIA,
+  ERC1155_WITH_CRITERIA
+}
+
 struct LienPointer {
   Lien lien;
   uint256 lienId;
@@ -25,6 +32,8 @@ struct LoanOffer {
   address lender;
   ERC721 collection;
   ERC20 currency;
+  CollateralType collateralType;
+  uint256 collateralIdentifier;
   uint256 totalAmount;
   uint256 minAmount;
   uint256 maxAmount;
@@ -44,6 +53,7 @@ struct LoanFullfillment {
   uint256 loanIndex;
   uint256 loanAmount;
   uint256 collateralIdentifier;
+  bytes32[] proof;
 }
 
 struct RepayFullfillment {
