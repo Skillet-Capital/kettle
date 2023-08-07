@@ -53,7 +53,6 @@ struct LoanFullfillment {
   uint256 loanIndex;
   uint256 loanAmount;
   uint256 collateralIdentifier;
-  uint256 collateralAmount;
   bytes32[] proof;
 }
 
