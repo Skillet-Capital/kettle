@@ -1,12 +1,11 @@
 import { expect } from "chai";
-import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+import { time, loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
 import { ethers } from "hardhat";
 import { Signer } from "ethers";
 
 import { getFixture } from './setup';
 import { 
-  getLatestTimestamp, 
   getLoanOffer, 
   generateMerkleRootForCollection, 
   generateMerkleProofForToken 
@@ -39,7 +38,7 @@ describe("Kettle", () => {
       verifier
     } = await loadFixture(getFixture));
 
-    blockTimestamp = await getLatestTimestamp();
+    blockTimestamp = await time.latest();
   });
 
   describe("Borrow", () => {
@@ -120,7 +119,7 @@ describe("Kettle", () => {
               offer: tokenOffer2,
               signature: "0x"
             }
-          ],  
+          ],
           [
             {
               loanIndex: 0,
@@ -191,7 +190,7 @@ describe("Kettle", () => {
           minAmount: 0,
           maxAmount: loanAmount,
           duration: DAY_SECONDS * 7,
-          rate: "1000",
+          rate: 1000,
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
 
@@ -205,7 +204,7 @@ describe("Kettle", () => {
           minAmount: 0,
           maxAmount: loanAmount,
           duration: DAY_SECONDS * 7,
-          rate: "1000",
+          rate: 1000,
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
       });

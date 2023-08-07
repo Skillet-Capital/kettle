@@ -1,78 +1,60 @@
 import { MerkleTree } from 'merkletreejs';
 
-import { Fee, LoanOffer, Lien } from "../types";
-
 import { ethers } from "hardhat";
+import { Addressable } from "ethers";
 
 import { hexlify } from '@ethersproject/bytes';
 import { keccak256 } from '@ethersproject/keccak256';
 import { randomBytes } from '@ethersproject/random';
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 
-export async function getLatestTimestamp(): Promise<number> {
-  const block = await ethers.provider.getBlock("latest");
-  return block?.timestamp ?? 0;
+import { Fee, CollateralType } from "../types";
+import { FeeStruct, LoanOfferStruct } from '../typechain-types/contracts/Kettle';
+
+export interface LoanOfferParams {
+  collateralType?: CollateralType;
+  collateralIdentifier: number | string | bigint;
+  lender: Addressable;
+  collection: Addressable;
+  currency: Addressable;
+  totalAmount: number | string | bigint;
+  minAmount: number | string | bigint;
+  maxAmount: number | string | bigint;
+  duration: number | string | bigint;
+  rate: number | string | bigint;
+  expiration: number | string | bigint;
+  fees?: FeeStruct[];
+}
+
+export async function getLoanOffer(params: LoanOfferParams): Promise<LoanOfferStruct> {
+  return {
+    lender: await params.lender.getAddress(),
+    collection: await params.collection.getAddress(),
+    currency: await params.currency.getAddress(),
+    collateralType: params?.collateralType ?? CollateralType.ERC721,
+    collateralIdentifier: BigInt(params.collateralIdentifier),
+    totalAmount: params.totalAmount,
+    minAmount: params.minAmount,
+    maxAmount: params.maxAmount,
+    duration: params.duration,
+    rate: params.rate,
+    salt: BigInt(hexlify(randomBytes(32))),
+    expiration: params.expiration,
+    fees: params?.fees ?? []
+  }
 }
 
 export function getFee(
-  rate: number,
+  rate: bigint,
   recipient: string
-): Fee {
+): FeeStruct {
   return {
     rate,
     recipient
   }
 }
 
-export function getLoanOffer(
-  collateralIdentifier: BigNumberish,
-  lender: string,
-  collection: string,
-  currency: string,
-  totalAmount: BigNumberish,
-  minAmount: BigNumberish,
-  maxAmount: BigNumberish,
-  duration: BigNumberish,
-  rate: BigNumberish,
-  expiration: BigNumberish,
-  fees: Fee[],
-  collateralType?: number
-): LoanOffer {
-  return {
-    lender,
-    collection,
-    currency,
-    collateralType: collateralType ?? 0,
-    collateralIdentifier,
-    totalAmount: totalAmount.toString(),
-    minAmount: minAmount.toString(),
-    maxAmount: maxAmount.toString(),
-    duration,
-    rate,
-    salt: hexlify(randomBytes(32)),
-    expiration,
-    fees
-  }
-}
-
-export function formatLien(
-  lien
-): Lien {
-  return {
-    lienId: lien.lienId,
-    lender: lien.lender,
-    borrower: lien.borrower,
-    collection: lien.collection,
-    currency: lien.currency,
-    tokenId: lien.tokenId,
-    borrowAmount: lien.borrowAmount,
-    startTime: lien.startTime,
-    duration: lien.duration,
-    rate: lien.rate
-  }
-}
-
-function generateMerkleRootForCollection(tokenIds: BigNumberish[]): BigNumberish {
+export function generateMerkleRootForCollection(tokenIds: BigNumberish[]): string {
   const hashIdentifier = (identifier: BigNumberish) => keccak256(
     Buffer.from(
       BigNumber.from(identifier).toHexString().slice(2).padStart(64, "0"),
@@ -89,7 +71,7 @@ function generateMerkleRootForCollection(tokenIds: BigNumberish[]): BigNumberish
   return tree.getHexRoot();
 }
 
-function generateMerkleProofForToken(tokenIds: BigNumberish[], token: BigNumberish): BigNumberish[] {
+export function generateMerkleProofForToken(tokenIds: BigNumberish[], token: BigNumberish): string[] {
   const hashIdentifier = (identifier: BigNumberish) => keccak256(
     Buffer.from(
       BigNumber.from(identifier).toHexString().slice(2).padStart(64, "0"),
@@ -105,4 +87,4 @@ function generateMerkleProofForToken(tokenIds: BigNumberish[], token: BigNumberi
 
   const identifier = hashIdentifier(token);
   return tree.getHexProof(identifier);
-} 
+}
