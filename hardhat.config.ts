@@ -5,9 +5,6 @@ import "hardhat-contract-sizer";
 import "hardhat-gas-reporter"
 import "hardhat-tracer";
 
-// import * as tdly from "@tenderly/hardhat-tenderly";
-// tdly.setup();
-
 const ALCHEMY_KEY = "1ZcejYUK_nDcZnF2Kyzx22d8h5T7xW72";
 
 const config: HardhatUserConfig = {
@@ -26,6 +23,10 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
+      forking: {
+        url: `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`,
+        blockNumber: 17119000
+      },
       allowUnlimitedContractSize: true,
       chainId: 1,
       gas: 2100000,
