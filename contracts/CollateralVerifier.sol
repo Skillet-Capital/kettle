@@ -7,12 +7,12 @@ import "./lib/Errors.sol";
 library CollateralVerifier {
 
   function verifyCollateral(
-    CollateralType collateralType,
+    uint8 collateralType,
     uint256 collateralRoot,
     uint256 tokenId,
     bytes32[] calldata proof
-  ) public pure {
-    if (collateralType == CollateralType.ERC721 || collateralType == CollateralType.ERC1155) {
+  ) external pure {
+    if (collateralType == uint8(CollateralType.ERC721) || collateralType == uint8(CollateralType.ERC1155)) {
       if (tokenId != collateralRoot) {
         revert InvalidCollateral();
       }

@@ -76,7 +76,7 @@ contract Kettle is IKettle, OfferController {
         LoanInput calldata loan = loanOffers[fullfillment.loanIndex];
 
         CollateralVerifier.verifyCollateral(
-            loan.offer.collateralType,
+            uint8(loan.offer.collateralType),
             loan.offer.collateralIdentifier,
             fullfillment.collateralIdentifier,
             fullfillment.proof
@@ -118,7 +118,7 @@ contract Kettle is IKettle, OfferController {
     ) external returns (uint256 lienId) {
 
         CollateralVerifier.verifyCollateral(
-            offer.collateralType,
+            uint8(offer.collateralType),
             offer.collateralIdentifier,
             collateralTokenId,
             proof
