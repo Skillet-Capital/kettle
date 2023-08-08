@@ -1,14 +1,19 @@
-import { BigNumberish } from "ethers";
+import { LienStruct } from "../typechain-types/contracts/Kettle";
 
 export interface Lien {
-  lienId: BigNumberish;
+  lienId: bigint;
   lender: string;
   borrower: string;
   collection: string;
   currency: string;
-  tokenId: BigNumberish;
-  borrowAmount: BigNumberish;
-  startTime: BigNumberish;
-  duration: BigNumberish;
-  rate: BigNumberish;
+  tokenId: bigint;
+  borrowAmount: bigint;
+  startTime: bigint;
+  duration: bigint;
+  rate: bigint;
+}
+
+export interface LienPointer {
+  lien: LienStruct;
+  lienId: bigint;
 }
