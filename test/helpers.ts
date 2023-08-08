@@ -9,7 +9,7 @@ import { randomBytes } from '@ethersproject/random';
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 
 import { Fee, CollateralType } from "../types";
-import { FeeStruct, LoanOfferStruct } from '../typechain-types/contracts/Kettle';
+import { FeeStruct, LienStruct, LoanOfferStruct } from '../typechain-types/contracts/Kettle';
 
 export interface LoanOfferParams {
   collateralType?: CollateralType;
@@ -87,4 +87,28 @@ export function generateMerkleProofForToken(tokenIds: BigNumberish[], token: Big
 
   const identifier = hashIdentifier(token);
   return tree.getHexProof(identifier);
+}
+
+export function formatLien(
+  lender: string,
+  borrower: string,
+  collection: string,
+  tokenId: string | number | bigint,
+  currency: string,
+  borrowAmount: string | number | bigint,
+  duration: string | number | bigint,
+  rate: string | number | bigint,
+  startTime: string | number | bigint
+): LienStruct {
+  return {
+    lender,
+    borrower,
+    collection,
+    tokenId: BigInt(tokenId),
+    currency,
+    borrowAmount,
+    duration,
+    rate,
+    startTime
+  }
 }
