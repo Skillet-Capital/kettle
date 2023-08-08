@@ -20,6 +20,7 @@ error CollectionsDoNotMatch();
 error CurrenciesDoNotMatch();
 error InsufficientRefinance();
 error InvalidAuctionDuration();
+error NoEscrowImplementation();
 
 // CollateralVerifier
 error InvalidCollateral();
