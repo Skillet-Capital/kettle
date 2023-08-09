@@ -1,5 +1,8 @@
 import { expect } from "chai";
-import { time, loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+import { 
+  time, 
+  loadFixture 
+} from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
 import { ethers } from "hardhat";
 import { Signer } from "ethers";
@@ -12,8 +15,14 @@ import {
 } from "./helpers";
 
 import { CollateralType } from '../types/loanOffer';
-import { Kettle, TestERC20, TestERC721, CollateralVerifier } from "../typechain-types";
 import { LoanOfferStruct } from "../typechain-types/contracts/Kettle";
+import { 
+  Kettle, 
+  TestERC20, 
+  TestERC721, 
+  CollateralVerifier,
+  ERC721EscrowBase
+} from "../typechain-types";
 
 const DAY_SECONDS = 24 * 60 * 60;
 
@@ -25,6 +34,7 @@ describe("Kettle", () => {
   let testErc721: TestERC721;
   let testErc20: TestERC20;
   let verifier: CollateralVerifier;
+  let erc721Escrow: ERC721EscrowBase;
 
   let blockTimestamp: number;
 
@@ -35,7 +45,8 @@ describe("Kettle", () => {
       kettle,
       testErc721,
       testErc20,
-      verifier
+      verifier,
+      erc721Escrow
     } = await loadFixture(getFixture));
 
     blockTimestamp = await time.latest();
@@ -90,7 +101,7 @@ describe("Kettle", () => {
           []
         );
 
-        expect(await testErc721.ownerOf(tokenId)).to.equal(await kettle.getAddress());
+        expect(await testErc721.ownerOf(tokenId)).to.equal(await erc721Escrow.getAddress());
         expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
       });
 
@@ -136,10 +147,10 @@ describe("Kettle", () => {
           ],
         );
 
-        expect(await testErc721.ownerOf(tokenId)).to.equal(await kettle.getAddress());
-        expect(await testErc721.ownerOf(traitTokenId)).to.equal(await kettle.getAddress());
+        expect(await testErc721.ownerOf(tokenId)).to.equal(await erc721Escrow.getAddress());
+        expect(await testErc721.ownerOf(traitTokenId)).to.equal(await erc721Escrow.getAddress());
         expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
-      })
+      });
 
       it('should reject with invalid collateral', async () => {
         await expect(kettle.connect(borrower).borrow(
@@ -172,6 +183,33 @@ describe("Kettle", () => {
             }
           ],
         )).to.be.revertedWithCustomError(verifier, "InvalidCollateral");
+      });
+
+      it('should reject with no escrow implementation', async () => {
+        const testErc7212 = await ethers.deployContract("TestERC721");
+        await testErc721.waitForDeployment();
+
+        const tokenOffer2 = await getLoanOffer({
+          collateralType: CollateralType.ERC721,
+          collateralIdentifier: tokenId,
+          lender: lender,
+          collection: testErc7212,
+          currency: testErc20,
+          totalAmount: loanAmount,
+          minAmount: 0,
+          maxAmount: loanAmount,
+          duration: DAY_SECONDS * 7,
+          rate: 1000,
+          expiration: blockTimestamp + DAY_SECONDS * 7,
+        });
+
+        await expect(kettle.connect(borrower).borrow(
+          tokenOffer2, 
+          "0x", 
+          loanAmount, 
+          1,
+          []
+        )).to.be.revertedWithCustomError(kettle, "NoEscrowImplementation");
       })
     });
 
@@ -212,13 +250,16 @@ describe("Kettle", () => {
       it('should start loan (collection criteria)', async () => {
         const proof = generateMerkleProofForToken(tokenIds, tokenId);
 
-        const txn = await kettle.connect(borrower).borrow(
+        await kettle.connect(borrower).borrow(
           collectionLoanOffer,
           "0x",
           loanAmount,
           1,
           proof
         );
+
+        expect(await testErc721.ownerOf(tokenId)).to.equal(await erc721Escrow.getAddress());
+        expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
       });
 
       it('should start loans in bulk (collateral criteria)', async () => {
@@ -243,8 +284,8 @@ describe("Kettle", () => {
           ],
         );
 
-        expect(await testErc721.ownerOf(tokenId)).to.equal(await kettle.getAddress());
-        expect(await testErc721.ownerOf(traitTokenId)).to.equal(await kettle.getAddress());
+        expect(await testErc721.ownerOf(tokenId)).to.equal(await erc721Escrow.getAddress());
+        expect(await testErc721.ownerOf(traitTokenId)).to.equal(await erc721Escrow.getAddress());
         expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
       })
 
@@ -258,6 +299,9 @@ describe("Kettle", () => {
           traitTokenId,
           traitProof
         );
+
+        expect(await testErc721.ownerOf(traitTokenId)).to.equal(await erc721Escrow.getAddress());
+        expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
       });
 
       it('should reject with invalid collateral criteria', async () => {

@@ -19,9 +19,9 @@ struct LienPointer {
 struct Lien {
   address lender;
   address borrower;
-  ERC721 collection;
+  address collection;
   uint256 tokenId;
-  ERC20 currency;
+  address currency;
   uint256 borrowAmount;
   uint256 duration;
   uint256 rate;
@@ -30,8 +30,8 @@ struct Lien {
 
 struct LoanOffer {
   address lender;
-  ERC721 collection;
-  ERC20 currency;
+  address collection;
+  address currency;
   CollateralType collateralType;
   uint256 collateralIdentifier;
   uint256 totalAmount;
