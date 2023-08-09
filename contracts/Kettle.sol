@@ -187,7 +187,6 @@ contract Kettle is IKettle, OfferController {
             identifier: collateralTokenId,
             amount: 1
         });
-        // offer.collection.safeTransferFrom(msg.sender, address(this), collateralTokenId);
 
         /* Transfer fees from lender */
         uint256 totalFees = payFees(address(offer.currency), offer.lender, loanAmount, offer.fees);
@@ -203,9 +202,6 @@ contract Kettle is IKettle, OfferController {
                 amount: loanAmount - totalFees
             });
         }
-        // unchecked {
-        //     offer.currency.transferFrom(offer.lender, msg.sender, loanAmount - totalFees);
-        // }
 
         IConduit(conduit).execute(transfers);
 
@@ -265,6 +261,7 @@ contract Kettle is IKettle, OfferController {
             RepayFullfillment calldata repayment = repayments[i];
             uint256 _repayAmount =_repay(repayment.lien, repayment.lienId);
 
+            /* Return collateral to borrower. */
             transfers[i] = ConduitTransfer({
                 itemType: ConduitItemType.ERC721,
                 token: address(repayment.lien.collection),
@@ -274,9 +271,7 @@ contract Kettle is IKettle, OfferController {
                 amount: 1
             });
 
-            /* Return collateral to borrower. */
-            // repayment.lien.collection.safeTransferFrom(address(this), repayment.lien.borrower, repayment.lien.tokenId);
-
+            /* Repay loan to lender. */
             transfers[i + numRepays] = ConduitTransfer({
                 itemType: ConduitItemType.ERC20,
                 token: address(repayment.lien.currency),
@@ -285,8 +280,6 @@ contract Kettle is IKettle, OfferController {
                 identifier: 0,
                 amount: _repayAmount
             });
-            /* Repay loan to lender. */
-            // repayment.lien.currency.transferFrom(msg.sender, repayment.lien.lender, _repayAmount);
         }
 
         IConduit(conduit).execute(transfers);
@@ -314,7 +307,6 @@ contract Kettle is IKettle, OfferController {
             identifier: lien.tokenId,
             amount: 1
         });
-        // lien.collection.safeTransferFrom(address(this), lien.borrower, lien.tokenId);
 
         /* Repay loan to lender. */
         transfers[1] = ConduitTransfer({
@@ -325,7 +317,6 @@ contract Kettle is IKettle, OfferController {
             identifier: 0,
             amount: _repayAmount
         });
-        // lien.currency.transferFrom(msg.sender, lien.lender, _repayAmount);
 
         IConduit(conduit).execute(transfers);
     }
@@ -437,7 +428,7 @@ contract Kettle is IKettle, OfferController {
                 identifier: 0,
                 amount: repayAmount
             });
-            // offer.currency.transferFrom(offer.lender, lien.lender, repayAmount);
+
             unchecked {
                 transfers[1] = ConduitTransfer({
                     itemType: ConduitItemType.ERC20,
@@ -447,7 +438,6 @@ contract Kettle is IKettle, OfferController {
                     identifier: 0,
                     amount: loanAmount - repayAmount
                 });
-                // offer.currency.transferFrom(offer.lender, lien.borrower, loanAmount - repayAmount);
             }
         } else {
             /* If new loan is less than the previous, borrower must supply the difference to repay the initial loan. */
@@ -459,7 +449,7 @@ contract Kettle is IKettle, OfferController {
                 identifier: 0,
                 amount: loanAmount
             });
-            // offer.currency.transferFrom(offer.lender, lien.lender, loanAmount);
+
             unchecked {
                 transfers[1] = ConduitTransfer({
                     itemType: ConduitItemType.ERC20,
@@ -469,7 +459,6 @@ contract Kettle is IKettle, OfferController {
                     identifier: 0,
                     amount: repayAmount - loanAmount
                 });
-                // offer.currency.transferFrom(lien.borrower, lien.lender, repayAmount - loanAmount);
             }
         }
     }
@@ -562,8 +551,6 @@ contract Kettle is IKettle, OfferController {
                 identifier: lien.tokenId,
                 amount: 1
             });
-
-            // lien.collection.safeTransferFrom(address(this), lien.lender, lien.tokenId);
 
             emit Seize(lienId, address(lien.collection));
 
