@@ -14,6 +14,7 @@ import { FeeStruct, LienStruct, LoanOfferStruct } from '../typechain-types/contr
 export interface LoanOfferParams {
   collateralType?: CollateralType;
   collateralIdentifier: number | string | bigint;
+  collateralAmount?: number | string | bigint;
   lender: Addressable;
   collection: Addressable;
   currency: Addressable;
@@ -33,6 +34,7 @@ export async function getLoanOffer(params: LoanOfferParams): Promise<LoanOfferSt
     currency: await params.currency.getAddress(),
     collateralType: params?.collateralType ?? CollateralType.ERC721,
     collateralIdentifier: BigInt(params.collateralIdentifier),
+    collateralAmount: params?.collateralAmount ?? 1,
     totalAmount: params.totalAmount,
     minAmount: params.minAmount,
     maxAmount: params.maxAmount,
@@ -92,8 +94,10 @@ export function generateMerkleProofForToken(tokenIds: BigNumberish[], token: Big
 export function formatLien(
   lender: string,
   borrower: string,
+  collateralType: string | number | bigint,
   collection: string,
   tokenId: string | number | bigint,
+  amount: string | number | bigint,
   currency: string,
   borrowAmount: string | number | bigint,
   duration: string | number | bigint,
@@ -103,8 +107,10 @@ export function formatLien(
   return {
     lender,
     borrower,
+    collateralType,
     collection,
     tokenId: BigInt(tokenId),
+    amount,
     currency,
     borrowAmount,
     duration,
