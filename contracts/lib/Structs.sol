@@ -19,8 +19,10 @@ struct LienPointer {
 struct Lien {
   address lender;
   address borrower;
+  uint8 collateralType;
   address collection;
   uint256 tokenId;
+  uint256 amount;
   address currency;
   uint256 borrowAmount;
   uint256 duration;
@@ -34,6 +36,7 @@ struct LoanOffer {
   address currency;
   CollateralType collateralType;
   uint256 collateralIdentifier;
+  uint256 collateralAmount;
   uint256 totalAmount;
   uint256 minAmount;
   uint256 maxAmount;

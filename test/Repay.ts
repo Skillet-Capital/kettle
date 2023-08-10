@@ -19,8 +19,10 @@ import { CollateralType } from '../types/loanOffer';
 import { LienStruct, LoanOfferStruct } from "../typechain-types/contracts/Kettle";
 import {
   Kettle,
+  TestERC1155,
   TestERC20,
-  TestERC721
+  TestERC721,
+  ERC1155EscrowBase
 } from "../typechain-types";
 import { LienPointer } from "../types";
 
@@ -32,7 +34,10 @@ describe("Kettle", () => {
 
   let kettle: Kettle;
   let testErc721: TestERC721;
+  let testErc1155: TestERC1155;
   let testErc20: TestERC20;
+
+  let erc1155Escrow: ERC1155EscrowBase;
 
   let blockTimestamp: number;
 
@@ -42,7 +47,9 @@ describe("Kettle", () => {
       lender,
       kettle,
       testErc721,
-      testErc20
+      testErc1155,
+      testErc20,
+      erc1155Escrow
     } = await loadFixture(getFixture));
 
     blockTimestamp = await time.latest();
@@ -51,6 +58,9 @@ describe("Kettle", () => {
   describe("Repay", () => {
     const tokenId1 = 1;
     const tokenId2 = 2;
+
+    const token1Amount = 2;
+    const token2Amount = 2;
 
     const tokenIds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     const collectionRoot = generateMerkleRootForCollection(tokenIds);
@@ -66,6 +76,10 @@ describe("Kettle", () => {
 
       await testErc721.mint(borrower, tokenId1);
       await testErc721.mint(borrower, tokenId2);
+
+      await testErc1155.mint(borrower, tokenId1, token1Amount);
+      await testErc1155.mint(borrower, tokenId2, token2Amount);
+
       await testErc20.mint(lender, loanAmount);
     });
 
@@ -110,8 +124,10 @@ describe("Kettle", () => {
               lien: formatLien(
                 parsedLog.lender,
                 parsedLog.borrower,
+                parsedLog.collateralType,
                 parsedLog.collection,
                 parsedLog.tokenId,
+                parsedLog.amount,
                 parsedLog.currency,
                 parsedLog.borrowAmount,
                 parsedLog.duration,
@@ -221,8 +237,10 @@ describe("Kettle", () => {
                   lien: formatLien(
                     parsedLog.lender,
                     parsedLog.borrower,
+                    parsedLog.collateralType,
                     parsedLog.collection,
                     parsedLog.tokenId,
+                    parsedLog.amount,
                     parsedLog.currency,
                     parsedLog.borrowAmount,
                     parsedLog.duration,
@@ -269,6 +287,188 @@ describe("Kettle", () => {
       it("should revert if at least one loan is expired", async () => {
         await time.setNextBlockTimestamp(BigInt(lienPointers[0].lien.startTime) + BigInt(lienPointers[0].lien.duration) + BigInt(1));
         await expect(kettle.connect(borrower).repayBatch(lienPointers)).to.be.revertedWithCustomError(kettle, "LienIsDefaulted")
+      });
+    });
+
+    describe("Single ERC1155", () => {
+      let lien: LienStruct;
+      let lienId: bigint;
+
+      beforeEach(async () => {
+        tokenOffer = await getLoanOffer({
+          collateralType: CollateralType.ERC1155,
+          collateralIdentifier: tokenId1,
+          collateralAmount: token1Amount,
+          lender: lender,
+          collection: testErc1155,
+          currency: testErc20,
+          totalAmount: loanAmount,
+          minAmount: 0,
+          maxAmount: loanAmount,
+          duration: DAY_SECONDS * 7,
+          rate: 1000,
+          expiration: blockTimestamp + DAY_SECONDS * 7,
+        });
+
+        /* Start Loan */
+        const txn = await kettle.connect(borrower).borrow(
+          tokenOffer,
+          "0x",
+          loanAmount,
+          tokenId1,
+          []
+        );
+
+        ({ lien, lienId } = await txn.wait().then(
+          async (receipt) => {
+            const kettleAddres = await kettle.getAddress();
+            const lienLog = receipt!.logs!.find(
+              (log) => (log.address === kettleAddres)
+            )!;
+  
+            const parsedLog = kettle.interface.decodeEventLog("LoanOfferTaken", lienLog!.data, lienLog!.topics);
+            return {
+              lienId: parsedLog.lienId,
+              lien: formatLien(
+                parsedLog.lender,
+                parsedLog.borrower,
+                parsedLog.collateralType,
+                parsedLog.collection,
+                parsedLog.tokenId,
+                parsedLog.amount,
+                parsedLog.currency,
+                parsedLog.borrowAmount,
+                parsedLog.duration,
+                parsedLog.rate,
+                parsedLog.startTime
+              )
+            }
+          }));
+
+        repaymentAmount = await kettle.getRepaymentAmount(
+          lien.borrowAmount,
+          lien.rate,
+          lien.duration
+        );
+  
+        await testErc20.mint(borrower, repaymentAmount - await testErc20.balanceOf(borrower.getAddress()));
+      });
+
+      it("should repay single loan", async () => {
+        await kettle.connect(borrower).repay(
+          lien,
+          lienId
+        );
+  
+        expect(await testErc1155.balanceOf(borrower, tokenId1)).to.equal(2);
+
+        expect(await testErc20.balanceOf(lender.getAddress())).to.equal(repaymentAmount);
+        expect(await testErc20.balanceOf(borrower.getAddress())).to.equal(0);
+      });
+    });
+
+    describe("Batch ERC1155", () => {
+      let lienPointers: LienPointer[];
+
+      beforeEach(async () => {
+        collectionOffer = await getLoanOffer({
+          collateralType: CollateralType.ERC1155_WITH_CRITERIA,
+          collateralIdentifier: collectionRoot,
+          collateralAmount: token1Amount,
+          lender: lender,
+          collection: testErc1155,
+          currency: testErc20,
+          totalAmount: loanAmount,
+          minAmount: 0,
+          maxAmount: loanAmount,
+          duration: DAY_SECONDS * 7,
+          rate: 1000,
+          expiration: blockTimestamp + DAY_SECONDS * 7,
+        });
+
+        const proof1 = generateMerkleProofForToken(tokenIds, tokenId1);
+        const proof2 = generateMerkleProofForToken(tokenIds, tokenId2);
+
+        const txn = await kettle.connect(borrower).borrowBatch(
+          [{ offer: collectionOffer, signature: "0x" }],  
+          [
+            {
+              loanIndex: 0,
+              loanAmount: ethers.parseEther("5"),
+              collateralIdentifier: 1,
+              proof: proof1
+            },
+            {
+              loanIndex: 0,
+              loanAmount: ethers.parseEther("5"),
+              collateralIdentifier: 2,
+              proof: proof2
+            }
+          ],
+        );
+
+        lienPointers = await txn.wait().then(
+          async (receipt) => {
+            const kettleAddres = await kettle.getAddress();
+            const lienLogs = receipt!.logs!.filter(
+              (log) => (log.address === kettleAddres)
+            )!;
+
+            return lienLogs.map(
+              (log) => {
+                const parsedLog = kettle.interface.decodeEventLog("LoanOfferTaken", log!.data, log!.topics);
+                return {
+                  lienId: parsedLog.lienId,
+                  lien: formatLien(
+                    parsedLog.lender,
+                    parsedLog.borrower,
+                    parsedLog.collateralType,
+                    parsedLog.collection,
+                    parsedLog.tokenId,
+                    parsedLog.amount,
+                    parsedLog.currency,
+                    parsedLog.borrowAmount,
+                    parsedLog.duration,
+                    parsedLog.rate,
+                    parsedLog.startTime
+                  )
+                }
+              }
+            );
+          });
+
+          expect(await testErc1155.balanceOf(erc1155Escrow, tokenId1)).to.equal(token1Amount);
+          expect(await testErc1155.balanceOf(borrower, tokenId1)).to.equal(0);
+
+          expect(await testErc1155.balanceOf(erc1155Escrow, tokenId2)).to.equal(token2Amount);
+          expect(await testErc1155.balanceOf(borrower, tokenId2)).to.equal(0);
+
+          const repayments = await Promise.all(
+            lienPointers.map(
+              async (lienPointer) => kettle.getRepaymentAmount(
+                  lienPointer.lien.borrowAmount,
+                  lienPointer.lien.rate,
+                  lienPointer.lien.duration
+                )
+            )
+          );
+
+          repaymentAmount = repayments.reduce(
+            (totalRepayment, repayment) => totalRepayment + repayment, 
+            BigInt(0)
+          );
+
+          await testErc20.mint(borrower, repaymentAmount - await testErc20.balanceOf(borrower.getAddress()));
+      });
+
+      it("should repay batch loans", async () => {
+        await kettle.connect(borrower).repayBatch(lienPointers);
+  
+        expect(await testErc1155.balanceOf(borrower, tokenId1)).to.equal(2);
+        expect(await testErc1155.balanceOf(borrower, tokenId2)).to.equal(2);
+
+        expect(await testErc20.balanceOf(lender.getAddress())).to.equal(repaymentAmount);
+        expect(await testErc20.balanceOf(borrower.getAddress())).to.equal(0);
       });
     });
   });

@@ -20,8 +20,10 @@ import {
   Kettle, 
   TestERC20, 
   TestERC721, 
+  TestERC1155,
   CollateralVerifier,
-  ERC721EscrowBase
+  ERC721EscrowBase,
+  ERC1155EscrowBase
 } from "../typechain-types";
 
 const DAY_SECONDS = 24 * 60 * 60;
@@ -32,9 +34,11 @@ describe("Kettle", () => {
 
   let kettle: Kettle;
   let testErc721: TestERC721;
+  let testErc1155: TestERC1155;
   let testErc20: TestERC20;
   let verifier: CollateralVerifier;
   let erc721Escrow: ERC721EscrowBase;
+  let erc1155Escrow: ERC1155EscrowBase;
 
   let blockTimestamp: number;
 
@@ -44,9 +48,11 @@ describe("Kettle", () => {
       lender,
       kettle,
       testErc721,
+      testErc1155,
       testErc20,
       verifier,
-      erc721Escrow
+      erc721Escrow,
+      erc1155Escrow
     } = await loadFixture(getFixture));
 
     blockTimestamp = await time.latest();
@@ -56,6 +62,9 @@ describe("Kettle", () => {
 
     const tokenId = 1;
     const traitTokenId = 2;
+
+    const tokenAmount = 2;
+    const traitTokenAmount = 2;
 
     const tokenIds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     const traitTokenIds = [2, 3];
@@ -68,6 +77,9 @@ describe("Kettle", () => {
     beforeEach(async () => {
       await testErc721.mint(borrower, tokenId);
       await testErc721.mint(borrower, traitTokenId);
+
+      await testErc1155.mint(borrower, tokenId, tokenAmount);
+      await testErc1155.mint(borrower, traitTokenId, traitTokenAmount);
 
       await testErc20.mint(lender, loanAmount);
     });
@@ -338,6 +350,168 @@ describe("Kettle", () => {
           ],
         )).to.be.revertedWithCustomError(verifier, "InvalidCollateralCriteria");
       })
+    });
+
+    describe("collateralType === ERC1155", () => {
+      let tokenOffer: LoanOfferStruct;
+
+      beforeEach(async () => {
+
+        tokenOffer = await getLoanOffer({
+          collateralType: CollateralType.ERC1155,
+          collateralIdentifier: tokenId,
+          collateralAmount: tokenAmount,
+          lender: lender,
+          collection: testErc1155,
+          currency: testErc20,
+          totalAmount: loanAmount,
+          minAmount: 0,
+          maxAmount: loanAmount,
+          duration: DAY_SECONDS * 7,
+          rate: 1000,
+          expiration: blockTimestamp + DAY_SECONDS * 7,
+        });
+      });
+
+      it('should start loan', async () => {
+        await kettle.connect(borrower).borrow(
+          tokenOffer, 
+          "0x", 
+          loanAmount, 
+          1,
+          []
+        );
+
+        expect(await testErc1155.balanceOf(erc1155Escrow, tokenId)).to.equal(2);
+        expect(await testErc1155.balanceOf(borrower, tokenId)).to.equal(0);
+        expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
+      });
+
+      it('should start loans in bulk', async () => {
+        const tokenOffer2 = await getLoanOffer({
+          collateralType: CollateralType.ERC1155,
+          collateralIdentifier: traitTokenId,
+          collateralAmount: traitTokenAmount,
+          lender: lender,
+          collection: testErc1155,
+          currency: testErc20,
+          totalAmount: loanAmount,
+          minAmount: 0,
+          maxAmount: loanAmount,
+          duration: DAY_SECONDS * 7,
+          rate: 1000,
+          expiration: blockTimestamp + DAY_SECONDS * 7,
+        });
+
+        await kettle.connect(borrower).borrowBatch(
+          [
+            { 
+              offer: tokenOffer, 
+              signature: "0x" 
+            },
+            {
+              offer: tokenOffer2,
+              signature: "0x"
+            }
+          ],
+          [
+            {
+              loanIndex: 0,
+              loanAmount: ethers.parseEther("5"),
+              collateralIdentifier: tokenId,
+              proof: []
+            },
+            {
+              loanIndex: 1,
+              loanAmount: ethers.parseEther("5"),
+              collateralIdentifier: traitTokenId,
+              proof: []
+            }
+          ],
+        );
+
+        expect(await testErc1155.balanceOf(erc1155Escrow, tokenId)).to.equal(tokenAmount);
+        expect(await testErc1155.balanceOf(borrower, tokenId)).to.equal(0);
+        
+        expect(await testErc1155.balanceOf(erc1155Escrow, traitTokenId)).to.equal(traitTokenAmount);
+        expect(await testErc1155.balanceOf(borrower, traitTokenId)).to.equal(0);
+
+        expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
+      });
+    });
+
+    describe("collateralType === ERC1155_WITH_CRITERIA", () => {
+      let collectionOffer: LoanOfferStruct;
+
+      beforeEach(async () => {
+
+        collectionOffer = await getLoanOffer({
+          collateralType: CollateralType.ERC1155_WITH_CRITERIA,
+          collateralIdentifier: collectionRoot,
+          collateralAmount: 2,
+          lender: lender,
+          collection: testErc1155,
+          currency: testErc20,
+          totalAmount: loanAmount,
+          minAmount: 0,
+          maxAmount: loanAmount,
+          duration: DAY_SECONDS * 7,
+          rate: 1000,
+          expiration: blockTimestamp + DAY_SECONDS * 7,
+        });
+      });
+
+      it('should start loan', async () => {
+        const proof = generateMerkleProofForToken(tokenIds, tokenId);
+
+        await kettle.connect(borrower).borrow(
+          collectionOffer, 
+          "0x", 
+          loanAmount, 
+          1,
+          proof
+        );
+
+        expect(await testErc1155.balanceOf(erc1155Escrow, tokenId)).to.equal(2);
+        expect(await testErc1155.balanceOf(borrower, tokenId)).to.equal(0);
+        expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
+      });
+
+      it('should start loan in bulk', async () => {
+        const proof1 = generateMerkleProofForToken(tokenIds, tokenId);
+        const proof2 = generateMerkleProofForToken(tokenIds, traitTokenId);
+
+        await kettle.connect(borrower).borrowBatch(
+          [
+            { 
+              offer: collectionOffer, 
+              signature: "0x" 
+            },
+          ],
+          [
+            {
+              loanIndex: 0,
+              loanAmount: ethers.parseEther("5"),
+              collateralIdentifier: tokenId,
+              proof: proof1
+            },
+            {
+              loanIndex: 0,
+              loanAmount: ethers.parseEther("5"),
+              collateralIdentifier: traitTokenId,
+              proof: proof2
+            }
+          ],
+        );
+
+        expect(await testErc1155.balanceOf(erc1155Escrow, tokenId)).to.equal(tokenAmount);
+        expect(await testErc1155.balanceOf(borrower, tokenId)).to.equal(0);
+        
+        expect(await testErc1155.balanceOf(erc1155Escrow, traitTokenId)).to.equal(traitTokenAmount);
+        expect(await testErc1155.balanceOf(borrower, traitTokenId)).to.equal(0);
+
+        expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
+      });
     });
   });
 });
