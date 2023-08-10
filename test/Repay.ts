@@ -437,7 +437,10 @@ describe("Kettle", () => {
             );
           });
 
-          expect(await testErc1155.balanceOf(erc1155Escrow, tokenId1)).to.equal(2);
+          expect(await testErc1155.balanceOf(erc1155Escrow, tokenId1)).to.equal(token1Amount);
+          expect(await testErc1155.balanceOf(borrower, tokenId1)).to.equal(0);
+
+          expect(await testErc1155.balanceOf(erc1155Escrow, tokenId2)).to.equal(token2Amount);
           expect(await testErc1155.balanceOf(borrower, tokenId2)).to.equal(0);
 
           const repayments = await Promise.all(
