@@ -124,12 +124,12 @@ contract Kettle is IKettle, OfferController {
             );
 
             transfers[i] = ConduitTransfer({
-                itemType: ConduitItemType.ERC721,
+                itemType: ConduitItemType(Helpers.getCollateralType(uint8(loan.offer.collateralType))),
                 token: loan.offer.collection,
                 from: msg.sender,
                 to: getEscrow(loan.offer.collection),
                 identifier: fullfillment.collateralIdentifier,
-                amount: 1
+                amount: loan.offer.collateralAmount
             });
 
             /* Transfer fees from lender */
@@ -180,12 +180,12 @@ contract Kettle is IKettle, OfferController {
 
         /* Lock collateral token. */
         transfers[0] = ConduitTransfer({
-            itemType: ConduitItemType.ERC721,
+            itemType: ConduitItemType(Helpers.getCollateralType(uint8(offer.collateralType))),
             token: address(offer.collection),
             from: msg.sender,
             to: getEscrow(offer.collection),
             identifier: collateralTokenId,
-            amount: 1
+            amount: offer.collateralAmount
         });
 
         /* Transfer fees from lender */
@@ -225,7 +225,9 @@ contract Kettle is IKettle, OfferController {
         Lien memory lien = Lien({
             lender: offer.lender,
             borrower: msg.sender,
+            collateralType: uint8(offer.collateralType),
             collection: offer.collection,
+            amount: offer.collateralAmount,
             tokenId: collateralTokenId,
             currency: offer.currency,
             borrowAmount: loanAmount,
@@ -263,12 +265,12 @@ contract Kettle is IKettle, OfferController {
 
             /* Return collateral to borrower. */
             transfers[i] = ConduitTransfer({
-                itemType: ConduitItemType.ERC721,
+                itemType: ConduitItemType(Helpers.getCollateralType(uint8(repayment.lien.collateralType))),
                 token: address(repayment.lien.collection),
                 from: getEscrow(repayment.lien.collection),
                 to: repayment.lien.borrower,
                 identifier: repayment.lien.tokenId,
-                amount: 1
+                amount: repayment.lien.amount
             });
 
             /* Repay loan to lender. */
@@ -300,12 +302,12 @@ contract Kettle is IKettle, OfferController {
 
         /* Return collateral to borrower. */
         transfers[0] = ConduitTransfer({
-            itemType: ConduitItemType.ERC721,
+            itemType: ConduitItemType(Helpers.getCollateralType(uint8(lien.collateralType))),
             token: address(lien.collection),
             from: getEscrow(lien.collection),
             to: lien.borrower,
             identifier: lien.tokenId,
-            amount: 1
+            amount: lien.amount
         });
 
         /* Repay loan to lender. */
@@ -482,7 +484,9 @@ contract Kettle is IKettle, OfferController {
         Lien memory newLien = Lien({
             lender: offer.lender,
             borrower: lien.borrower,
+            collateralType: uint8(lien.collateralType),
             collection: lien.collection,
+            amount: lien.amount,
             tokenId: lien.tokenId,
             currency: lien.currency,
             borrowAmount: loanAmount,
@@ -544,12 +548,12 @@ contract Kettle is IKettle, OfferController {
 
             /* Seize collateral to lender. */
             transfers[i] = ConduitTransfer({
-                itemType: ConduitItemType.ERC721,
+                itemType: ConduitItemType(Helpers.getCollateralType(uint8(lien.collateralType))),
                 token: address(lien.collection),
                 from: getEscrow(lien.collection),
                 to: lien.lender,
                 identifier: lien.tokenId,
-                amount: 1
+                amount: lien.amount
             });
 
             emit Seize(lienId, address(lien.collection));

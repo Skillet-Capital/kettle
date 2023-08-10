@@ -60,12 +60,14 @@ abstract contract OfferController is IOfferController, Signatures {
             lien.lender,
             lien.borrower,
             address(lien.currency),
+            lien.collateralType,
             address(lien.collection),
             lien.tokenId,
+            lien.amount,
             lien.borrowAmount,
             lien.rate,
             lien.duration,
-            lien.startTime
+            block.timestamp
         );
     }
 
