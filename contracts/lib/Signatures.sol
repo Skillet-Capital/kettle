@@ -78,7 +78,12 @@ abstract contract Signatures is ISignatures {
             )
         );
 
-        bytes memory feeTypestring = bytes.concat("Fee(", "uint16 rate,", "address recipient", ")");
+        bytes memory feeTypestring = bytes.concat(
+            "Fee(",
+            "uint16 rate,",
+            "address recipient"
+            ")"
+        );
 
         feeTypehash = keccak256(feeTypestring);
         loanOfferTypehash = keccak256(
@@ -87,6 +92,9 @@ abstract contract Signatures is ISignatures {
                 "address lender,",
                 "address collection,",
                 "address currency,",
+                "uint8 collateralType,",
+                "uint256 collateralIdentifier,",
+                "uint256 collateralAmount,",
                 "uint256 totalAmount,",
                 "uint256 minAmount,",
                 "uint256 maxAmount,",
@@ -94,8 +102,7 @@ abstract contract Signatures is ISignatures {
                 "uint256 duration,",
                 "uint256 salt,",
                 "uint256 expiration,",
-                "uint256 nonce,",
-                "Fee[] fees,",
+                "Fee[] fees",
                 ")",
                 feeTypestring
             )
@@ -143,6 +150,9 @@ abstract contract Signatures is ISignatures {
                     offer.lender,
                     offer.collection,
                     offer.currency,
+                    uint8(offer.collateralType),
+                    offer.collateralIdentifier,
+                    offer.collateralAmount,
                     offer.totalAmount,
                     offer.minAmount,
                     offer.maxAmount,
@@ -150,7 +160,6 @@ abstract contract Signatures is ISignatures {
                     offer.duration,
                     offer.salt,
                     offer.expiration,
-                    nonces[offer.lender],
                     _packFees(offer.fees)
                 )
             );
