@@ -86,7 +86,7 @@ abstract contract OfferController is IOfferController, Signatures {
         uint256 expiration,
         uint256 salt
     ) internal view {
-        // _verifyOfferAuthorization(offerHash, signer, signature);
+        _verifyOfferAuthorization(offerHash, signer, signature);
 
         if (expiration < block.timestamp) {
             revert OfferExpired();
