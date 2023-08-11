@@ -566,15 +566,6 @@ contract Kettle is IKettle, OfferController {
         IConduit(conduit).execute(transfers);
     }
 
-    function onERC721Received(
-        address operator,
-        address from,
-        uint256 tokenId,
-        bytes calldata data
-    ) external pure returns (bytes4) {
-        return this.onERC721Received.selector;
-    }
-
     /*/////////////////////////////////////////////////////////////
                         VALIDATION MODIFIERS
     /////////////////////////////////////////////////////////////*/
