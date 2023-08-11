@@ -9,7 +9,8 @@ import { Signer } from "ethers";
 
 import { getFixture } from './setup';
 import { 
-  getLoanOffer, 
+  getLoanOffer,
+  signLoanOffer,
   generateMerkleRootForCollection, 
   generateMerkleProofForToken 
 } from "./helpers";
@@ -86,6 +87,7 @@ describe("Kettle", () => {
 
     describe("collateralType === ERC721", () => {
       let tokenOffer: LoanOfferStruct;
+      let signature: string;
 
       beforeEach(async () => {
 
@@ -102,12 +104,18 @@ describe("Kettle", () => {
           rate: 1000,
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
+
+        signature = await signLoanOffer(
+          kettle,
+          lender,
+          tokenOffer
+        );
       });
 
       it('should start loan', async () => {
         await kettle.connect(borrower).borrow(
           tokenOffer, 
-          "0x", 
+          signature, 
           loanAmount, 
           1,
           []
@@ -132,15 +140,21 @@ describe("Kettle", () => {
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
 
+        const signature2 = await signLoanOffer(
+          kettle,
+          lender,
+          tokenOffer2
+        );
+
         await kettle.connect(borrower).borrowBatch(
           [
             { 
               offer: tokenOffer, 
-              signature: "0x" 
+              signature: signature 
             },
             {
               offer: tokenOffer2,
-              signature: "0x"
+              signature: signature2
             }
           ],
           [
@@ -167,7 +181,7 @@ describe("Kettle", () => {
       it('should reject with invalid collateral', async () => {
         await expect(kettle.connect(borrower).borrow(
           tokenOffer, 
-          "0x", 
+          signature, 
           loanAmount, 
           2,
           []
@@ -179,7 +193,7 @@ describe("Kettle", () => {
         const proof2 = generateMerkleProofForToken(tokenIds, traitTokenId);
 
         await expect(kettle.connect(borrower).borrowBatch(
-          [{ offer: tokenOffer, signature: "0x" }],  
+          [{ offer: tokenOffer, signature: signature }],  
           [
             {
               loanIndex: 0,
@@ -198,14 +212,14 @@ describe("Kettle", () => {
       });
 
       it('should reject with no escrow implementation', async () => {
-        const testErc7212 = await ethers.deployContract("TestERC721");
-        await testErc721.waitForDeployment();
+        const testErc721_2 = await ethers.deployContract("TestERC721");
+        await testErc721_2.waitForDeployment();
 
         const tokenOffer2 = await getLoanOffer({
           collateralType: CollateralType.ERC721,
           collateralIdentifier: tokenId,
           lender: lender,
-          collection: testErc7212,
+          collection: testErc721_2,
           currency: testErc20,
           totalAmount: loanAmount,
           minAmount: 0,
@@ -215,9 +229,15 @@ describe("Kettle", () => {
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
 
+        const signature2 = await signLoanOffer(
+          kettle,
+          lender,
+          tokenOffer2
+        );
+
         await expect(kettle.connect(borrower).borrow(
           tokenOffer2, 
-          "0x", 
+          signature2, 
           loanAmount, 
           1,
           []
@@ -228,6 +248,9 @@ describe("Kettle", () => {
     describe("collateralType === ERC721_WITH_CRITERIA", () => {
       let collectionLoanOffer: LoanOfferStruct;
       let traitLoanOffer: LoanOfferStruct;
+      
+      let collectionLoanOfferSignature: string;
+      let traitLoanOfferSignature: string;
 
       beforeEach(async () => {
         collectionLoanOffer = await getLoanOffer({
@@ -244,6 +267,12 @@ describe("Kettle", () => {
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
 
+        collectionLoanOfferSignature = await signLoanOffer(
+          kettle,
+          lender,
+          collectionLoanOffer
+        );
+
         traitLoanOffer = await getLoanOffer({
           collateralType: CollateralType.ERC721_WITH_CRITERIA,
           collateralIdentifier: traitRoot,
@@ -257,6 +286,12 @@ describe("Kettle", () => {
           rate: 1000,
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
+
+        traitLoanOfferSignature = await signLoanOffer(
+          kettle,
+          lender,
+          traitLoanOffer
+        );
       });
 
       it('should start loan (collection criteria)', async () => {
@@ -264,7 +299,7 @@ describe("Kettle", () => {
 
         await kettle.connect(borrower).borrow(
           collectionLoanOffer,
-          "0x",
+          collectionLoanOfferSignature,
           loanAmount,
           1,
           proof
@@ -279,7 +314,7 @@ describe("Kettle", () => {
         const proof2 = generateMerkleProofForToken(tokenIds, traitTokenId);
 
         await kettle.connect(borrower).borrowBatch(
-          [{ offer: collectionLoanOffer, signature: "0x" }],  
+          [{ offer: collectionLoanOffer, signature: collectionLoanOfferSignature }],  
           [
             {
               loanIndex: 0,
@@ -306,7 +341,7 @@ describe("Kettle", () => {
 
         await kettle.connect(borrower).borrow(
           traitLoanOffer,
-          "0x",
+          traitLoanOfferSignature,
           loanAmount,
           traitTokenId,
           traitProof
@@ -321,7 +356,7 @@ describe("Kettle", () => {
 
         await expect(kettle.connect(borrower).borrow(
           collectionLoanOffer,
-          "0x",
+          collectionLoanOfferSignature,
           loanAmount,
           traitTokenId,
           traitProof
@@ -333,7 +368,7 @@ describe("Kettle", () => {
         const proof2 = generateMerkleProofForToken(tokenIds, traitTokenId);
 
         await expect(kettle.connect(borrower).borrowBatch(
-          [{ offer: collectionLoanOffer, signature: "0x" }],  
+          [{ offer: collectionLoanOffer, signature: collectionLoanOfferSignature }],  
           [
             {
               loanIndex: 0,
@@ -354,6 +389,7 @@ describe("Kettle", () => {
 
     describe("collateralType === ERC1155", () => {
       let tokenOffer: LoanOfferStruct;
+      let signature: string;
 
       beforeEach(async () => {
 
@@ -371,12 +407,18 @@ describe("Kettle", () => {
           rate: 1000,
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
+
+        signature = await signLoanOffer(
+          kettle,
+          lender,
+          tokenOffer
+        );
       });
 
       it('should start loan', async () => {
         await kettle.connect(borrower).borrow(
           tokenOffer, 
-          "0x", 
+          signature, 
           loanAmount, 
           1,
           []
@@ -403,15 +445,21 @@ describe("Kettle", () => {
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
 
+        const signature2 = await signLoanOffer(
+          kettle,
+          lender,
+          tokenOffer2
+        );
+
         await kettle.connect(borrower).borrowBatch(
           [
             { 
               offer: tokenOffer, 
-              signature: "0x" 
+              signature
             },
             {
               offer: tokenOffer2,
-              signature: "0x"
+              signature: signature2
             }
           ],
           [
@@ -442,6 +490,7 @@ describe("Kettle", () => {
 
     describe("collateralType === ERC1155_WITH_CRITERIA", () => {
       let collectionOffer: LoanOfferStruct;
+      let signature: string;
 
       beforeEach(async () => {
 
@@ -459,6 +508,12 @@ describe("Kettle", () => {
           rate: 1000,
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
+
+        signature = await signLoanOffer(
+          kettle,
+          lender,
+          collectionOffer
+        );
       });
 
       it('should start loan', async () => {
@@ -466,7 +521,7 @@ describe("Kettle", () => {
 
         await kettle.connect(borrower).borrow(
           collectionOffer, 
-          "0x", 
+          signature, 
           loanAmount, 
           1,
           proof
@@ -485,7 +540,7 @@ describe("Kettle", () => {
           [
             { 
               offer: collectionOffer, 
-              signature: "0x" 
+              signature 
             },
           ],
           [
