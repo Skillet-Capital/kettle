@@ -11,7 +11,8 @@ import {
   Helpers, 
   CollateralVerifier, 
   ERC721EscrowBase, 
-  ERC1155EscrowBase
+  ERC1155EscrowBase,
+  ConduitControllerInterface__factory
 } from "../typechain-types";
 
 import CONDUIT_CONTROLLER_ABI from "../abis/conduit-controller.json";
@@ -41,8 +42,13 @@ export async function getFixture(): Promise<Fixture> {
     owner
   );
 
-  const conduitController = await ConduitController.deploy({ gasLimit: 1e8 });
-  await conduitController.waitForDeployment();
+  const conduitControllerDeployment = await ConduitController.deploy({ gasLimit: 1e8 });
+  await conduitControllerDeployment.waitForDeployment();
+
+  const conduitController = await ConduitControllerInterface__factory.connect(
+    await conduitControllerDeployment.getAddress(), 
+    owner
+  );
 
   const conduitKey = hexConcat([owner.address, "0x000000000000000000000000"]);
   let { conduit, exists } = await conduitController.getConduit(conduitKey);
