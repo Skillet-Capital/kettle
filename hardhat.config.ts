@@ -13,9 +13,15 @@ const config: HardhatUserConfig = {
       {
         version: "0.8.19",
         settings: {
+          viaIR: true,
           optimizer: {
             enabled: true,
-            runs: 200
+            runs: 200,
+            details: {
+              yulDetails: {
+                optimizerSteps: "u",
+              },
+            },
           },
         },
       },
@@ -23,10 +29,10 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
-      forking: {
-        url: `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`,
-        blockNumber: 17119000
-      },
+      // forking: {
+      //   url: `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`,
+      //   blockNumber: 17119000
+      // },
       allowUnlimitedContractSize: true,
       chainId: 1,
       gas: 2100000,
@@ -36,12 +42,7 @@ const config: HardhatUserConfig = {
   gasReporter: {
     enabled: true,
     gasPrice: 20
-  },
-  // tenderly: {
-  //   username: "diamondjim",
-  //   project: "kettle",
-  //   privateVerification: true
-  // }
+  }
 }
 
 export default config;
