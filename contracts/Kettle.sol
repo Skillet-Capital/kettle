@@ -340,72 +340,140 @@ contract Kettle is IKettle, OfferController {
                     REFINANCE FLOWS
     //////////////////////////////////////////////////*/
 
-    // /**
-    //  * @notice Refinances to different loan amount and repays previous loan
-    //  * @dev Can be called by anyone, but loan amount net fees must exceed repay amount
-    //  * @param lien Lien struct
-    //  * @param lienId Lien id
-    //  * @param offer Loan offer
-    //  * @param signature Offer signatures
-    //  */
-    // function refinance(
-    //     Lien calldata lien,
-    //     uint256 lienId,
-    //     uint256 loanAmount,
-    //     LoanOffer calldata offer,
-    //     bytes calldata signature
-    // ) external validateLien(lien, lienId) lienIsActive(lien) {
-        
-    //     /* Interest rate must be at least as good as current. */
-    //     if (offer.rate > lien.rate) {
-    //         revert InvalidRefinanceRate();
-    //     }
+    function borrowerRefinanceBatch(
+        LoanInput[] calldata loans,
+        RefinanceFullfillment[] calldata refinances
+    ) external {
 
-    //     /* Duration must be as long as remaining time in current loan */
-    //     uint256 remainingTime = lien.startTime + lien.duration - block.timestamp;
-    //     if (offer.duration < remainingTime) {
-    //         revert InvalidRefinanceDuration();
-    //     }
+        uint256 numRefinances = refinances.length;
+        ConduitTransfer[] memory transfers = new ConduitTransfer[](numRefinances * 2);
 
-    //     /* Refinance initial loan to new loan (loanAmount must be within lender range) */
-    //     _refinance(lien, lienId, loanAmount, offer, signature);
+        for (uint256 i=0; i<numRefinances; i++) {
+            RefinanceFullfillment calldata refinance = refinances[i];
 
-    //     /* Transfer fees */
-    //     uint256 totalFees = payFees(address(offer.currency), offer.lender, loanAmount, offer.fees);
-    //     unchecked {
-    //         loanAmount -= totalFees;
-    //     }
+            /* Verify that sender is borrower */
+            if (msg.sender != refinance.lien.borrower) {
+                revert Unauthorized();
+            }
 
-    //     /* Net loan amount must be greater than repay amount */
-    //     uint256 repayAmount = getRepaymentAmount(lien.borrowAmount, lien.rate, lien.duration);
+            /* Verify lien is valid */
+            if (!_validateLien(refinance.lien, refinance.lienId)) {
+                revert InvalidLien();
+            }
 
-    //     if (loanAmount < repayAmount) {
-    //         revert InsufficientRefinance();
-    //     }
+            /* Verify lien is  */
+            if (_lienIsDefaulted(refinance.lien)) {
+                revert LienIsDefaulted();
+            }
 
-    //     /* Repay initial loan */
-    //     offer.currency.transferFrom(offer.lender, lien.lender, repayAmount);
+            /* Verify collateral is takeable by loan offer */
+            CollateralVerifier.verifyCollateral(
+                uint8(loans[refinance.loanIndex].offer.collateralType),
+                loans[refinance.loanIndex].offer.collateralIdentifier,
+                refinance.lien.tokenId,
+                refinance.proof
+            );
 
-    //     /* Transfer difference to borrower */
-    //     if (loanAmount - repayAmount > 0) {
-    //         unchecked {
-    //             offer.currency.transferFrom(offer.lender, lien.borrower, loanAmount - repayAmount);
-    //         }
-    //     }
-    // }
+            LoanInput calldata loanOfferPointer = loans[refinance.loanIndex];
+            uint256 loanAmount = refinance.loanAmount;
+
+            /* Refinance initial loan to new loan (loanAmount must be within lender range) */
+            _refinance(
+                refinance.lien, 
+                refinance.lienId, 
+                loanAmount,
+                loanOfferPointer.offer, 
+                loanOfferPointer.signature
+            );
+
+            uint256 repayAmount = getRepaymentAmount(
+                refinance.lien.borrowAmount, 
+                refinance.lien.rate, 
+                refinance.lien.duration
+            );
+
+            /* Transfer fees */
+            uint256 totalFees = payFees(
+                address(loanOfferPointer.offer.currency), 
+                loanOfferPointer.offer.lender,
+                refinance.loanAmount, 
+                loanOfferPointer.offer.fees
+            );
+
+            unchecked {
+                loanAmount -= totalFees;
+            }
+
+            if (loanAmount >= repayAmount) {
+                /* If new loan is more than the previous, repay the initial loan and send the remaining to the borrower. */
+                transfers[i] = ConduitTransfer({
+                    itemType: ConduitItemType.ERC20,
+                    token: address(loanOfferPointer.offer.currency),
+                    from: loanOfferPointer.offer.lender,
+                    to: refinance.lien.lender,
+                    identifier: 0,
+                    amount: repayAmount
+                });
+
+                unchecked {
+                    transfers[i + numRefinances] = ConduitTransfer({
+                        itemType: ConduitItemType.ERC20,
+                        token: address(loanOfferPointer.offer.currency),
+                        from: loanOfferPointer.offer.lender,
+                        to: refinance.lien.borrower,
+                        identifier: 0,
+                        amount: loanAmount - repayAmount
+                    });
+                }
+
+            } else {
+                /* If new loan is less than the previous, borrower must supply the difference to repay the initial loan. */
+                transfers[i] = ConduitTransfer({
+                    itemType: ConduitItemType.ERC20,
+                    token: address(loanOfferPointer.offer.currency),
+                    from: loanOfferPointer.offer.lender,
+                    to: refinance.lien.lender,
+                    identifier: 0,
+                    amount: loanAmount
+                });
+
+                unchecked {
+                    transfers[i + numRefinances] = ConduitTransfer({
+                        itemType: ConduitItemType.ERC20,
+                        token: address(loanOfferPointer.offer.currency),
+                        from: refinance.lien.borrower,
+                        to: refinance.lien.lender,
+                        identifier: 0,
+                        amount: repayAmount - loanAmount
+                    });
+                }
+            }
+        }
+
+        IConduit(conduit).execute(transfers);
+    }
 
     function borrowerRefinance(
         Lien calldata lien,
         uint256 lienId,
         uint256 loanAmount,
         LoanOffer calldata offer,
-        bytes calldata signature
+        bytes calldata signature,
+        bytes32[] calldata proof
     ) external validateLien(lien, lienId) lienIsActive(lien) {
         if (msg.sender != lien.borrower) {
             revert Unauthorized();
         }
 
         ConduitTransfer[] memory transfers = new ConduitTransfer[](2);
+
+        /* Verify collateral is takeable by loan offer */
+        CollateralVerifier.verifyCollateral(
+            uint8(offer.collateralType),
+            offer.collateralIdentifier,
+            lien.tokenId,
+            proof
+        );
 
         /* Refinance initial loan to new loan (loanAmount must be within lender range) */
         _refinance(lien, lienId, loanAmount, offer, signature);
@@ -461,6 +529,8 @@ contract Kettle is IKettle, OfferController {
                 });
             }
         }
+
+        IConduit(conduit).execute(transfers);
     }
 
     function _refinance(
@@ -482,7 +552,7 @@ contract Kettle is IKettle, OfferController {
         Lien memory newLien = Lien({
             lender: offer.lender,
             borrower: lien.borrower,
-            collateralType: uint8(lien.collateralType),
+            collateralType: uint8(offer.collateralType),
             collection: lien.collection,
             amount: lien.amount,
             tokenId: lien.tokenId,
@@ -504,6 +574,7 @@ contract Kettle is IKettle, OfferController {
             lienId,
             address(offer.collection),
             address(offer.currency),
+            lien.amount,
             lien.lender,
             newLien.lender,
             lien.borrowAmount,
