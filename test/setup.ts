@@ -1,11 +1,21 @@
 import { ethers } from "hardhat";
 import { Signer } from "ethers";
-import { Kettle, TestERC20, TestERC721, TestERC1155, Helpers, CollateralVerifier, ERC721EscrowBase, ERC1155EscrowBase } from "../typechain-types";
 import { MaxUint256 } from "@ethersproject/constants";
-import { formatEther } from "@ethersproject/units";
 import { hexConcat } from "@ethersproject/bytes";
 
+import { 
+  Kettle, 
+  TestERC20, 
+  TestERC721, 
+  TestERC1155, 
+  Helpers, 
+  CollateralVerifier, 
+  ERC721EscrowBase, 
+  ERC1155EscrowBase
+} from "../typechain-types";
+
 import CONDUIT_CONTROLLER_ABI from "../abis/conduit-controller.json";
+import { ConduitControllerBytecode } from "../abis/conduit-controller-bytecode.json";
 
 export interface Fixture {
   owner: Signer,
@@ -25,11 +35,14 @@ export async function getFixture(): Promise<Fixture> {
   const [owner, borrower, lender] = await ethers.getSigners();
 
   /* Deploy Conduit */
-  const conduitController = new ethers.Contract(
-    "0x00000000f9490004c11cef243f5400493c00ad63",
+  const ConduitController = new ethers.ContractFactory(
     CONDUIT_CONTROLLER_ABI,
+    ConduitControllerBytecode,
     owner
   );
+
+  const conduitController = await ConduitController.deploy({ gasLimit: 1e8 });
+  await conduitController.waitForDeployment();
 
   const conduitKey = hexConcat([owner.address, "0x000000000000000000000000"]);
   let { conduit, exists } = await conduitController.getConduit(conduitKey);
