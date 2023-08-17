@@ -1,7 +1,7 @@
 import { MerkleTree } from 'merkletreejs';
 
 import { ethers } from "hardhat";
-import { Addressable } from "ethers";
+import { Addressable, Signer } from "ethers";
 
 import { hexlify } from '@ethersproject/bytes';
 import { keccak256 } from '@ethersproject/keccak256';
@@ -117,4 +117,42 @@ export function formatLien(
     rate,
     startTime
   }
+}
+
+export async function signLoanOffer(
+  kettle: Addressable,
+  lender: Signer,
+  loanOffer: LoanOfferStruct 
+) {
+  const domain = {
+    name: 'Kettle',
+    version: '1',
+    chainId: 1,
+    verifyingContract: await kettle.getAddress()
+  }
+
+  const types = {
+    Fee: [
+      { name: 'rate', type: 'uint16' },
+      { name: 'recipient', type: 'address' }
+    ],
+    LoanOffer: [
+      { name: 'lender', type: 'address' },
+      { name: 'collection', type: 'address' },
+      { name: 'currency', type: 'address' },
+      { name: 'collateralType', type: 'uint8' },
+      { name: 'collateralIdentifier', type: 'uint256' },
+      { name: 'collateralAmount', type: 'uint256' },
+      { name: 'totalAmount', type: 'uint256' },
+      { name: 'minAmount', type: 'uint256' },
+      { name: 'maxAmount', type: 'uint256' },
+      { name: 'rate', type: 'uint256' },
+      { name: 'duration', type: 'uint256' },
+      { name: 'salt', type: 'uint256' },
+      { name: 'expiration', type: 'uint256' },
+      { name: 'fees', type: 'Fee[]' }
+    ]
+  }
+
+  return await lender.signTypedData(domain, types, loanOffer);
 }

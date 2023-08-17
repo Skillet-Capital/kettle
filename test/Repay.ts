@@ -11,6 +11,7 @@ import { getFixture } from './setup';
 import {
   formatLien,
   getLoanOffer,
+  signLoanOffer,
   generateMerkleRootForCollection,
   generateMerkleProofForToken
 } from "./helpers";
@@ -68,6 +69,9 @@ describe("Kettle", () => {
     let tokenOffer: LoanOfferStruct;
     let collectionOffer: LoanOfferStruct;
 
+    let tokenSignature: string;
+    let collectionSignature: string;
+
     let loanAmount: bigint;
     let repaymentAmount: bigint;
 
@@ -102,10 +106,12 @@ describe("Kettle", () => {
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
 
+        tokenSignature = await signLoanOffer(kettle, lender, tokenOffer);
+
         /* Start Loan */
         const txn = await kettle.connect(borrower).borrow(
           tokenOffer,
-          "0x",
+          tokenSignature,
           loanAmount,
           tokenId1,
           []
@@ -201,11 +207,13 @@ describe("Kettle", () => {
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
 
+        collectionSignature = await signLoanOffer(kettle, lender, collectionOffer);
+
         const proof1 = generateMerkleProofForToken(tokenIds, tokenId1);
         const proof2 = generateMerkleProofForToken(tokenIds, tokenId2);
 
         const txn = await kettle.connect(borrower).borrowBatch(
-          [{ offer: collectionOffer, signature: "0x" }],  
+          [{ offer: collectionOffer, signature: collectionSignature }],  
           [
             {
               loanIndex: 0,
@@ -310,10 +318,12 @@ describe("Kettle", () => {
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
 
+        tokenSignature = await signLoanOffer(kettle, lender, tokenOffer);
+
         /* Start Loan */
         const txn = await kettle.connect(borrower).borrow(
           tokenOffer,
-          "0x",
+          tokenSignature,
           loanAmount,
           tokenId1,
           []
@@ -386,11 +396,13 @@ describe("Kettle", () => {
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
 
+        collectionSignature = await signLoanOffer(kettle, lender, collectionOffer);
+
         const proof1 = generateMerkleProofForToken(tokenIds, tokenId1);
         const proof2 = generateMerkleProofForToken(tokenIds, tokenId2);
 
         const txn = await kettle.connect(borrower).borrowBatch(
-          [{ offer: collectionOffer, signature: "0x" }],  
+          [{ offer: collectionOffer, signature: collectionSignature }],  
           [
             {
               loanIndex: 0,
