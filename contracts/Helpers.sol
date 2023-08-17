@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: BSL 1.1 - Blend (c) Non Fungible Trading Ltd.
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
 import "solmate/src/utils/SignedWadMath.sol";
