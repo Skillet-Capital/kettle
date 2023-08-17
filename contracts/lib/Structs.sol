@@ -64,6 +64,14 @@ struct RepayFullfillment {
   uint256 lienId;
 }
 
+struct RefinanceFullfillment {
+  Lien lien;
+  uint256 lienId;
+  uint256 loanIndex;
+  uint256 loanAmount;
+  bytes32[] proof;
+}
+
 struct Fee {
   uint16 rate;
   address recipient;

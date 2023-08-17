@@ -14,6 +14,7 @@ interface IKettle is IOfferController {
       uint256 lienId,
       address collection,
       address currency,
+      uint256 amount,
       address oldLender,
       address newLender,
       uint256 oldBorrowAmount,
