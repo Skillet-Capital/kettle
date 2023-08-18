@@ -28,6 +28,7 @@ import {
 import { LienPointer } from "../types";
 
 const DAY_SECONDS = 24 * 60 * 60;
+const ADDRESS_ZERO = "0x0000000000000000000000000000000000000000"
 
 describe("Kettle", () => {
   let borrower: Signer;
@@ -114,6 +115,7 @@ describe("Kettle", () => {
           tokenSignature,
           loanAmount,
           tokenId1,
+          ADDRESS_ZERO,
           []
         );
 
@@ -228,6 +230,7 @@ describe("Kettle", () => {
               proof: proof2
             }
           ],
+          ADDRESS_ZERO
         );
 
         lienPointers = await txn.wait().then(
@@ -326,6 +329,7 @@ describe("Kettle", () => {
           tokenSignature,
           loanAmount,
           tokenId1,
+          ADDRESS_ZERO,
           []
         );
 
@@ -417,6 +421,7 @@ describe("Kettle", () => {
               proof: proof2
             }
           ],
+          ADDRESS_ZERO
         );
 
         lienPointers = await txn.wait().then(
