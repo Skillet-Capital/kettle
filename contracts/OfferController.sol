@@ -1,8 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import "./lib/Signatures.sol";
-import "./interfaces/IOfferController.sol";
+import { IOfferController } from "./interfaces/IOfferController.sol";
+import { Lien, LoanOffer } from "./lib/Structs.sol";
+import { Signatures } from "./lib/Signatures.sol";
+
+import {
+    InvalidLoanAmount,
+    InsufficientOffer,
+    RateTooHigh,
+    OfferExpired,
+    OfferUnavailable
+} from "./lib/Errors.sol";
 
 abstract contract OfferController is IOfferController, Signatures {
     uint256 private constant _LIQUIDATION_THRESHOLD = 100_000;
@@ -42,7 +51,10 @@ abstract contract OfferController is IOfferController, Signatures {
         if (offer.rate > _LIQUIDATION_THRESHOLD) {
             revert RateTooHigh();
         }
-        if (lien.borrowAmount > offer.maxAmount || lien.borrowAmount < offer.minAmount) {
+        if (
+            lien.borrowAmount > offer.maxAmount ||
+            lien.borrowAmount < offer.minAmount
+        ) {
             revert InvalidLoanAmount();
         }
         uint256 __amountTaken = _amountTaken[hash];

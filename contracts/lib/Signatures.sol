@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import "./Structs.sol";
-import "./Errors.sol";
-import "../interfaces/ISignatures.sol";
+import { Fee, LoanOffer } from "./Structs.sol";
+import { InvalidVParameter, InvalidSignature } from "./Errors.sol";
+import { ISignatures } from "../interfaces/ISignatures.sol";
 
 abstract contract Signatures is ISignatures {
     bytes32 private immutable _LOAN_OFFER_TYPEHASH;
@@ -27,7 +27,11 @@ abstract contract Signatures is ISignatures {
         ) = _createTypehashes();
     }
 
-    function information() external view returns (string memory version, bytes32 domainSeparator) {
+    function information()
+        external
+        view
+        returns (string memory version, bytes32 domainSeparator)
+    {
         version = _VERSION;
         domainSeparator = _hashDomain(
             _EIP_712_DOMAIN_TYPEHASH,
@@ -36,19 +40,20 @@ abstract contract Signatures is ISignatures {
         );
     }
 
-    function getOfferHash(LoanOffer calldata offer) external view returns (bytes32) {
+    function getOfferHash(
+        LoanOffer calldata offer
+    ) external view returns (bytes32) {
         return _hashOffer(offer);
     }
 
     function getHashToSign(bytes32 offerHash) external view returns (bytes32) {
-      return _hashToSign(offerHash);
+        return _hashToSign(offerHash);
     }
 
-    function verifyOfferSignature(LoanOffer calldata offer, bytes calldata signature)
-        external
-        view
-        returns (bool)
-    {
+    function verifyOfferSignature(
+        LoanOffer calldata offer,
+        bytes calldata signature
+    ) external view returns (bool) {
         bytes32 offerHash = _hashOffer(offer);
         _verifyOfferAuthorization(offerHash, offer.lender, signature);
         return true;
@@ -66,7 +71,6 @@ abstract contract Signatures is ISignatures {
             bytes32 eip712DomainTypehash
         )
     {
-      
         eip712DomainTypehash = keccak256(
             bytes.concat(
                 "EIP712Domain(",
@@ -142,7 +146,9 @@ abstract contract Signatures is ISignatures {
         return keccak256(abi.encodePacked(feeHashes));
     }
 
-    function _hashOffer(LoanOffer calldata offer) internal view returns (bytes32) {
+    function _hashOffer(
+        LoanOffer calldata offer
+    ) internal view returns (bytes32) {
         return
             keccak256(
                 abi.encode(
@@ -166,19 +172,13 @@ abstract contract Signatures is ISignatures {
     }
 
     function _hashToSign(bytes32 hash) internal view returns (bytes32) {
-      bytes32 domain = _hashDomain(
-          _EIP_712_DOMAIN_TYPEHASH,
-          keccak256(bytes(_NAME)),
-          keccak256(bytes(_VERSION))
-      );
-
-        return keccak256(
-            abi.encodePacked(
-              bytes2(0x1901),
-              domain,
-              hash
-            )
+        bytes32 domain = _hashDomain(
+            _EIP_712_DOMAIN_TYPEHASH,
+            keccak256(bytes(_NAME)),
+            keccak256(bytes(_VERSION))
         );
+
+        return keccak256(abi.encodePacked(bytes2(0x1901), domain, hash));
     }
 
     /**
@@ -196,6 +196,8 @@ abstract contract Signatures is ISignatures {
         bytes32 r;
         bytes32 s;
         uint8 v;
+
+        // solhint-disable-next-line
         assembly {
             r := calldataload(signature.offset)
             s := calldataload(add(signature.offset, 0x20))
@@ -212,7 +214,13 @@ abstract contract Signatures is ISignatures {
      * @param r r parameter
      * @param s s parameter
      */
-    function _verify(address signer, bytes32 digest, uint8 v, bytes32 r, bytes32 s) internal pure {
+    function _verify(
+        address signer,
+        bytes32 digest,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) internal pure {
         if (v != 27 && v != 28) {
             revert InvalidVParameter();
         }
