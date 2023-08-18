@@ -28,6 +28,7 @@ import {
 } from "../typechain-types";
 
 const DAY_SECONDS = 24 * 60 * 60;
+const ADDRESS_ZERO = "0x0000000000000000000000000000000000000000"
 
 describe("Kettle", () => {
   let borrower: Signer;
@@ -118,7 +119,8 @@ describe("Kettle", () => {
           signature, 
           loanAmount, 
           1,
-          []
+          ADDRESS_ZERO,
+          [],
         );
 
         expect(await testErc721.ownerOf(tokenId)).to.equal(await erc721Escrow.getAddress());
@@ -171,6 +173,7 @@ describe("Kettle", () => {
               proof: []
             }
           ],
+          ADDRESS_ZERO
         );
 
         expect(await testErc721.ownerOf(tokenId)).to.equal(await erc721Escrow.getAddress());
@@ -184,6 +187,7 @@ describe("Kettle", () => {
           signature, 
           loanAmount, 
           2,
+          ADDRESS_ZERO,
           []
         )).to.be.revertedWithCustomError(verifier, "InvalidCollateral");
       });
@@ -208,6 +212,7 @@ describe("Kettle", () => {
               proof: proof2
             }
           ],
+          ADDRESS_ZERO
         )).to.be.revertedWithCustomError(verifier, "InvalidCollateral");
       });
 
@@ -240,6 +245,7 @@ describe("Kettle", () => {
           signature2, 
           loanAmount, 
           1,
+          ADDRESS_ZERO,
           []
         )).to.be.revertedWithCustomError(kettle, "NoEscrowImplementation");
       })
@@ -302,6 +308,7 @@ describe("Kettle", () => {
           collectionLoanOfferSignature,
           loanAmount,
           1,
+          ADDRESS_ZERO,
           proof
         );
 
@@ -329,6 +336,7 @@ describe("Kettle", () => {
               proof: proof2
             }
           ],
+          ADDRESS_ZERO
         );
 
         expect(await testErc721.ownerOf(tokenId)).to.equal(await erc721Escrow.getAddress());
@@ -344,6 +352,7 @@ describe("Kettle", () => {
           traitLoanOfferSignature,
           loanAmount,
           traitTokenId,
+          ADDRESS_ZERO,
           traitProof
         );
 
@@ -359,6 +368,7 @@ describe("Kettle", () => {
           collectionLoanOfferSignature,
           loanAmount,
           traitTokenId,
+          ADDRESS_ZERO,
           traitProof
         )).to.be.revertedWithCustomError(verifier, "InvalidCollateralCriteria");
       })
@@ -383,6 +393,7 @@ describe("Kettle", () => {
               proof: proof2
             }
           ],
+          ADDRESS_ZERO
         )).to.be.revertedWithCustomError(verifier, "InvalidCollateralCriteria");
       })
     });
@@ -421,6 +432,7 @@ describe("Kettle", () => {
           signature, 
           loanAmount, 
           1,
+          ADDRESS_ZERO,
           []
         );
 
@@ -476,6 +488,7 @@ describe("Kettle", () => {
               proof: []
             }
           ],
+          ADDRESS_ZERO
         );
 
         expect(await testErc1155.balanceOf(erc1155Escrow, tokenId)).to.equal(tokenAmount);
@@ -524,6 +537,7 @@ describe("Kettle", () => {
           signature, 
           loanAmount, 
           1,
+          ADDRESS_ZERO,
           proof
         );
 
@@ -557,6 +571,7 @@ describe("Kettle", () => {
               proof: proof2
             }
           ],
+          ADDRESS_ZERO
         );
 
         expect(await testErc1155.balanceOf(erc1155Escrow, tokenId)).to.equal(tokenAmount);

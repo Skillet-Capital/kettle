@@ -30,6 +30,7 @@ export interface Fixture {
   verifier: CollateralVerifier;
   erc1155Escrow: ERC1155EscrowBase;
   erc721Escrow: ERC721EscrowBase;
+  conduitAddress: string
 }
 
 export async function getFixture(): Promise<Fixture> {
@@ -140,6 +141,7 @@ export async function getFixture(): Promise<Fixture> {
     helpers,
     verifier,
     erc721Escrow,
-    erc1155Escrow
+    erc1155Escrow,
+    conduitAddress: conduit
   }
 };
