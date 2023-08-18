@@ -5,7 +5,8 @@ import "hardhat-contract-sizer";
 import "hardhat-gas-reporter"
 import "hardhat-tracer";
 
-const ALCHEMY_KEY = "1ZcejYUK_nDcZnF2Kyzx22d8h5T7xW72";
+import * as dotenv from "dotenv";
+dotenv.config();
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -29,10 +30,6 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
-      // forking: {
-      //   url: `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`,
-      //   blockNumber: 17119000
-      // },
       allowUnlimitedContractSize: true,
       chainId: 1,
       gas: 2100000,
