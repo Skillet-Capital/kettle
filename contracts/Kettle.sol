@@ -94,8 +94,13 @@ contract Kettle is IKettle, OfferController {
      */
     function borrowBatch(
         LoanInput[] calldata loanOffers,
-        LoanFullfillment[] calldata fullfillments
+        LoanFullfillment[] calldata fullfillments,
+        address borrower
     ) external returns (uint256[] memory lienIds) {
+        if (borrower == address(0)) {
+            borrower = msg.sender;
+        }
+
         uint256 numFills = fullfillments.length;
 
         lienIds = new uint256[](numFills);
@@ -118,7 +123,8 @@ contract Kettle is IKettle, OfferController {
                 loan.offer,
                 loan.signature,
                 fullfillment.loanAmount,
-                fullfillment.collateralIdentifier
+                fullfillment.collateralIdentifier,
+                borrower
             );
 
             transfers[i] = ConduitTransfer({
@@ -139,7 +145,7 @@ contract Kettle is IKettle, OfferController {
                     itemType: ConduitItemType.ERC20,
                     token: loan.offer.currency,
                     from: loan.offer.lender,
-                    to: msg.sender,
+                    to: borrower,
                     identifier: 0,
                     amount: fullfillment.loanAmount - totalFees
                 });
@@ -162,8 +168,13 @@ contract Kettle is IKettle, OfferController {
         bytes calldata signature,
         uint256 loanAmount,
         uint256 collateralTokenId,
+        address borrower,
         bytes32[] calldata proof
     ) external returns (uint256 lienId) {
+
+        if (borrower == address(0)) {
+            borrower = msg.sender;
+        }
 
         ConduitTransfer[] memory transfers = new ConduitTransfer[](2);
 
@@ -174,7 +185,7 @@ contract Kettle is IKettle, OfferController {
             proof
         );
 
-        lienId = _borrow(offer, signature, loanAmount, collateralTokenId);
+        lienId = _borrow(offer, signature, loanAmount, collateralTokenId, borrower);
 
         /* Lock collateral token. */
         transfers[0] = ConduitTransfer({
@@ -195,14 +206,13 @@ contract Kettle is IKettle, OfferController {
                 itemType: ConduitItemType.ERC20,
                 token: address(offer.currency),
                 from: offer.lender,
-                to: msg.sender,
+                to: borrower,
                 identifier: 0,
                 amount: loanAmount - totalFees
             });
         }
 
         IConduit(conduit).execute(transfers);
-
     }
 
     /**
@@ -217,12 +227,13 @@ contract Kettle is IKettle, OfferController {
         LoanOffer calldata offer,
         bytes calldata signature,
         uint256 loanAmount,
-        uint256 collateralTokenId
+        uint256 collateralTokenId,
+        address borrower
     ) internal returns (uint256 lienId) {
 
         Lien memory lien = Lien({
             lender: offer.lender,
-            borrower: msg.sender,
+            borrower: borrower,
             collateralType: uint8(offer.collateralType),
             collection: offer.collection,
             amount: offer.collateralAmount,

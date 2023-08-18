@@ -39,10 +39,22 @@ interface IKettle is IOfferController {
         bytes calldata signature,
         uint256 loanAmount,
         uint256 collateralId,
+        address borrower,
         bytes32[] calldata proof
     ) external returns (uint256 lienId);
 
+    function borrowBatch(
+        LoanInput[] calldata loanInputs,
+        LoanFullfillment[] calldata fullfillments,
+        address borrower
+    ) external returns (uint256[] memory lienIds);
+
+    /*//////////////////////////////////////////////////
+                      REPAYMENT FLOWS
+    //////////////////////////////////////////////////*/
     function repay(Lien calldata lien, uint256 lienId) external;
+
+    function repayBatch(RepayFullfillment[] calldata repayments) external;
 
     /*//////////////////////////////////////////////////
                     REFINANCING FLOWS
