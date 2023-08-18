@@ -1,14 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import {
-    CollateralType
-} from "./lib/Structs.sol";
+import { CollateralType } from "./lib/Structs.sol";
 
-import {
-    InvalidCollateral,
-    InvalidCollateralCriteria
-} from "./lib/Errors.sol";
+import { InvalidCollateral, InvalidCollateralCriteria } from "./lib/Errors.sol";
 
 library CollateralVerifier {
     function verifyCollateral(
@@ -52,7 +47,6 @@ library CollateralVerifier {
         bytes32 a,
         bytes32 b
     ) private pure returns (bytes32 value) {
-        
         // solhint-disable-next-line
         assembly {
             mstore(0x00, a)

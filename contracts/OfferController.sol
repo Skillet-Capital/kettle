@@ -5,13 +5,7 @@ import { IOfferController } from "./interfaces/IOfferController.sol";
 import { Lien, LoanOffer } from "./lib/Structs.sol";
 import { Signatures } from "./lib/Signatures.sol";
 
-import {
-    InvalidLoanAmount,
-    InsufficientOffer,
-    RateTooHigh,
-    OfferExpired,
-    OfferUnavailable
-} from "./lib/Errors.sol";
+import { InvalidLoanAmount, InsufficientOffer, RateTooHigh, OfferExpired, OfferUnavailable } from "./lib/Errors.sol";
 
 abstract contract OfferController is IOfferController, Signatures {
     uint256 private constant _LIQUIDATION_THRESHOLD = 100_000;

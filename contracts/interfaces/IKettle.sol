@@ -3,14 +3,7 @@ pragma solidity ^0.8.0;
 
 import { IOfferController } from "./IOfferController.sol";
 
-import {
-    LoanOffer,
-    LoanInput,
-    LoanFullfillment,
-    RepayFullfillment,
-    Lien,
-    LienPointer
-} from "../lib/Structs.sol";
+import { LoanOffer, LoanInput, LoanFullfillment, RepayFullfillment, Lien, LienPointer } from "../lib/Structs.sol";
 
 interface IKettle is IOfferController {
     event Repay(uint256 lienId, address collection, uint256 amount);

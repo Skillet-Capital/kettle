@@ -9,26 +9,9 @@ import { IKettle } from "./interfaces/IKettle.sol";
 
 import { IConduit, ConduitTransfer, ConduitItemType } from "./interfaces/IConduit.sol";
 
-import { 
-    Fee, 
-    Lien, 
-    LoanOffer, 
-    LoanInput, 
-    LienPointer,
-    LoanFullfillment, 
-    RepayFullfillment, 
-    RefinanceFullfillment 
-} from "./lib/Structs.sol";
+import { Fee, Lien, LoanOffer, LoanInput, LienPointer, LoanFullfillment, RepayFullfillment, RefinanceFullfillment } from "./lib/Structs.sol";
 
-import {
-    InvalidLien,
-    Unauthorized,
-    LienIsDefaulted,
-    LienNotDefaulted,
-    CollectionsDoNotMatch,
-    CurrenciesDoNotMatch,
-    NoEscrowImplementation
-} from "./lib/Errors.sol";
+import { InvalidLien, Unauthorized, LienIsDefaulted, LienNotDefaulted, CollectionsDoNotMatch, CurrenciesDoNotMatch, NoEscrowImplementation } from "./lib/Errors.sol";
 
 contract Kettle is IKettle, OfferController {
     uint256 private constant _BASIS_POINTS = 10_000;
