@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity >=0.8.7;
 
-import "solmate/src/tokens/ERC1155.sol";
+import { ERC1155 } from "solmate/src/tokens/ERC1155.sol";
 
 // Used for minting test ERC1155s in our tests
 contract TestERC1155 is ERC1155 {

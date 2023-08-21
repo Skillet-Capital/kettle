@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import "./Helpers.sol";
-import "./CollateralVerifier.sol";
+import { Helpers } from "./Helpers.sol";
+import { CollateralVerifier } from "./CollateralVerifier.sol";
 
-import "./lib/Structs.sol";
-import "./OfferController.sol";
-import "./interfaces/IKettle.sol";
+import { OfferController } from "./OfferController.sol";
+import { IKettle } from "./interfaces/IKettle.sol";
 
-import "./interfaces/IConduit.sol";
+import { IConduit, ConduitTransfer, ConduitItemType } from "./interfaces/IConduit.sol";
+
+import { Fee, Lien, LoanOffer, LoanInput, LienPointer, LoanFullfillment, RepayFullfillment, RefinanceFullfillment } from "./lib/Structs.sol";
+
+import { InvalidLien, Unauthorized, LienIsDefaulted, LienNotDefaulted, CollectionsDoNotMatch, CurrenciesDoNotMatch, NoEscrowImplementation } from "./lib/Errors.sol";
 
 contract Kettle is IKettle, OfferController {
     uint256 private constant _BASIS_POINTS = 10_000;
@@ -31,14 +34,12 @@ contract Kettle is IKettle, OfferController {
         uint256 rate,
         uint256 duration
     ) public pure returns (uint256) {
-        return Helpers.computeCurrentDebt(
-            borrowAmount,
-            rate,
-            duration
-        );
+        return Helpers.computeCurrentDebt(borrowAmount, rate, duration);
     }
 
-    function getEscrow(address collection) public view returns(address escrow) {
+    function getEscrow(
+        address collection
+    ) public view returns (address escrow) {
         escrow = escrows[collection];
         if (escrow == address(0)) {
             revert NoEscrowImplementation();
@@ -58,14 +59,19 @@ contract Kettle is IKettle, OfferController {
     function payFees(
         address currency,
         address lender,
-        uint256 loanAmount, 
+        uint256 loanAmount,
         Fee[] calldata fees
     ) internal returns (uint256 totalFees) {
-        ConduitTransfer[] memory conduitTransfers = new ConduitTransfer[](fees.length);
-        
+        ConduitTransfer[] memory conduitTransfers = new ConduitTransfer[](
+            fees.length
+        );
+
         totalFees = 0;
-        for (uint256 i=0; i<fees.length; i++) {
-            uint256 feeAmount = Helpers.computeFeeAmount(loanAmount, fees[i].rate);
+        for (uint256 i = 0; i < fees.length; i++) {
+            uint256 feeAmount = Helpers.computeFeeAmount(
+                loanAmount,
+                fees[i].rate
+            );
             conduitTransfers[i] = ConduitTransfer({
                 itemType: ConduitItemType.ERC20,
                 token: currency,
@@ -75,7 +81,7 @@ contract Kettle is IKettle, OfferController {
                 amount: feeAmount
             });
             unchecked {
-                totalFees += feeAmount;   
+                totalFees += feeAmount;
             }
         }
 
@@ -105,10 +111,11 @@ contract Kettle is IKettle, OfferController {
 
         lienIds = new uint256[](numFills);
 
-        ConduitTransfer[] memory transfers = new ConduitTransfer[](numFills * 2);
+        ConduitTransfer[] memory transfers = new ConduitTransfer[](
+            numFills * 2
+        );
 
-        for (uint256 i=0; i<numFills; i++) {
-            
+        for (uint256 i = 0; i < numFills; i++) {
             LoanFullfillment calldata fullfillment = fullfillments[i];
             LoanInput calldata loan = loanOffers[fullfillment.loanIndex];
 
@@ -128,7 +135,9 @@ contract Kettle is IKettle, OfferController {
             );
 
             transfers[i] = ConduitTransfer({
-                itemType: ConduitItemType(Helpers.getCollateralType(uint8(loan.offer.collateralType))),
+                itemType: ConduitItemType(
+                    Helpers.getCollateralType(uint8(loan.offer.collateralType))
+                ),
                 token: loan.offer.collection,
                 from: msg.sender,
                 to: getEscrow(loan.offer.collection),
@@ -137,7 +146,12 @@ contract Kettle is IKettle, OfferController {
             });
 
             /* Transfer fees from lender */
-            uint256 totalFees = payFees(address(loan.offer.currency), loan.offer.lender, fullfillment.loanAmount, loan.offer.fees);
+            uint256 totalFees = payFees(
+                loan.offer.currency,
+                loan.offer.lender,
+                fullfillment.loanAmount,
+                loan.offer.fees
+            );
 
             /* Transfer loan to borrower. */
             unchecked {
@@ -171,7 +185,6 @@ contract Kettle is IKettle, OfferController {
         address borrower,
         bytes32[] calldata proof
     ) external returns (uint256 lienId) {
-
         if (borrower == address(0)) {
             borrower = msg.sender;
         }
@@ -185,12 +198,20 @@ contract Kettle is IKettle, OfferController {
             proof
         );
 
-        lienId = _borrow(offer, signature, loanAmount, collateralTokenId, borrower);
+        lienId = _borrow(
+            offer,
+            signature,
+            loanAmount,
+            collateralTokenId,
+            borrower
+        );
 
         /* Lock collateral token. */
         transfers[0] = ConduitTransfer({
-            itemType: ConduitItemType(Helpers.getCollateralType(uint8(offer.collateralType))),
-            token: address(offer.collection),
+            itemType: ConduitItemType(
+                Helpers.getCollateralType(uint8(offer.collateralType))
+            ),
+            token: offer.collection,
             from: msg.sender,
             to: getEscrow(offer.collection),
             identifier: collateralTokenId,
@@ -198,13 +219,18 @@ contract Kettle is IKettle, OfferController {
         });
 
         /* Transfer fees from lender */
-        uint256 totalFees = payFees(address(offer.currency), offer.lender, loanAmount, offer.fees);
+        uint256 totalFees = payFees(
+            offer.currency,
+            offer.lender,
+            loanAmount,
+            offer.fees
+        );
 
         /* Transfer loan to borrower. */
         unchecked {
             transfers[1] = ConduitTransfer({
                 itemType: ConduitItemType.ERC20,
-                token: address(offer.currency),
+                token: offer.currency,
                 from: offer.lender,
                 to: borrower,
                 identifier: 0,
@@ -230,7 +256,6 @@ contract Kettle is IKettle, OfferController {
         uint256 collateralTokenId,
         address borrower
     ) internal returns (uint256 lienId) {
-
         Lien memory lien = Lien({
             lender: offer.lender,
             borrower: borrower,
@@ -259,23 +284,29 @@ contract Kettle is IKettle, OfferController {
     //////////////////////////////////////////////////*/
 
     /**
-      * @notice Repays loans in batch
-      * @param repayments Loan repayments
+     * @notice Repays loans in batch
+     * @param repayments Loan repayments
      */
     function repayBatch(
         RepayFullfillment[] calldata repayments
     ) external validateLiens(repayments) liensAreActive(repayments) {
         uint256 numRepays = repayments.length;
-        ConduitTransfer[] memory transfers = new ConduitTransfer[](numRepays * 2);
+        ConduitTransfer[] memory transfers = new ConduitTransfer[](
+            numRepays * 2
+        );
 
-        for (uint256 i=0; i<numRepays; i++) {
+        for (uint256 i = 0; i < numRepays; i++) {
             RepayFullfillment calldata repayment = repayments[i];
-            uint256 _repayAmount =_repay(repayment.lien, repayment.lienId);
+            uint256 _repayAmount = _repay(repayment.lien, repayment.lienId);
 
             /* Return collateral to borrower. */
             transfers[i] = ConduitTransfer({
-                itemType: ConduitItemType(Helpers.getCollateralType(uint8(repayment.lien.collateralType))),
-                token: address(repayment.lien.collection),
+                itemType: ConduitItemType(
+                    Helpers.getCollateralType(
+                        uint8(repayment.lien.collateralType)
+                    )
+                ),
+                token: repayment.lien.collection,
                 from: getEscrow(repayment.lien.collection),
                 to: repayment.lien.borrower,
                 identifier: repayment.lien.tokenId,
@@ -285,7 +316,7 @@ contract Kettle is IKettle, OfferController {
             /* Repay loan to lender. */
             transfers[i + numRepays] = ConduitTransfer({
                 itemType: ConduitItemType.ERC20,
-                token: address(repayment.lien.currency),
+                token: repayment.lien.currency,
                 from: msg.sender,
                 to: repayment.lien.lender,
                 identifier: 0,
@@ -311,8 +342,10 @@ contract Kettle is IKettle, OfferController {
 
         /* Return collateral to borrower. */
         transfers[0] = ConduitTransfer({
-            itemType: ConduitItemType(Helpers.getCollateralType(uint8(lien.collateralType))),
-            token: address(lien.collection),
+            itemType: ConduitItemType(
+                Helpers.getCollateralType(uint8(lien.collateralType))
+            ),
+            token: lien.collection,
             from: getEscrow(lien.collection),
             to: lien.borrower,
             identifier: lien.tokenId,
@@ -322,7 +355,7 @@ contract Kettle is IKettle, OfferController {
         /* Repay loan to lender. */
         transfers[1] = ConduitTransfer({
             itemType: ConduitItemType.ERC20,
-            token: address(lien.currency),
+            token: lien.currency,
             from: msg.sender,
             to: lien.lender,
             identifier: 0,
@@ -339,12 +372,19 @@ contract Kettle is IKettle, OfferController {
      * @param lienId Lien id
      * @return repayAmount Current amount of debt owed on the lien
      */
-    function _repay(Lien calldata lien, uint256 lienId) internal returns (uint256 repayAmount) {
-        repayAmount = getRepaymentAmount(lien.borrowAmount, lien.rate, lien.duration);
-        
+    function _repay(
+        Lien calldata lien,
+        uint256 lienId
+    ) internal returns (uint256 repayAmount) {
+        repayAmount = getRepaymentAmount(
+            lien.borrowAmount,
+            lien.rate,
+            lien.duration
+        );
+
         delete liens[lienId];
 
-        emit Repay(lienId, address(lien.collection), repayAmount);
+        emit Repay(lienId, lien.collection, repayAmount);
     }
 
     /*//////////////////////////////////////////////////
@@ -355,11 +395,12 @@ contract Kettle is IKettle, OfferController {
         LoanInput[] calldata loans,
         RefinanceFullfillment[] calldata refinances
     ) external {
-
         uint256 numRefinances = refinances.length;
-        ConduitTransfer[] memory transfers = new ConduitTransfer[](numRefinances * 2);
+        ConduitTransfer[] memory transfers = new ConduitTransfer[](
+            numRefinances * 2
+        );
 
-        for (uint256 i=0; i<numRefinances; i++) {
+        for (uint256 i = 0; i < numRefinances; i++) {
             RefinanceFullfillment calldata refinance = refinances[i];
 
             /* Verify that sender is borrower */
@@ -390,24 +431,24 @@ contract Kettle is IKettle, OfferController {
 
             /* Refinance initial loan to new loan (loanAmount must be within lender range) */
             _refinance(
-                refinance.lien, 
-                refinance.lienId, 
+                refinance.lien,
+                refinance.lienId,
                 loanAmount,
-                loanOfferPointer.offer, 
+                loanOfferPointer.offer,
                 loanOfferPointer.signature
             );
 
             uint256 repayAmount = getRepaymentAmount(
-                refinance.lien.borrowAmount, 
-                refinance.lien.rate, 
+                refinance.lien.borrowAmount,
+                refinance.lien.rate,
                 refinance.lien.duration
             );
 
             /* Transfer fees */
             uint256 totalFees = payFees(
-                address(loanOfferPointer.offer.currency), 
+                loanOfferPointer.offer.currency,
                 loanOfferPointer.offer.lender,
-                refinance.loanAmount, 
+                refinance.loanAmount,
                 loanOfferPointer.offer.fees
             );
 
@@ -419,7 +460,7 @@ contract Kettle is IKettle, OfferController {
                 /* If new loan is more than the previous, repay the initial loan and send the remaining to the borrower. */
                 transfers[i] = ConduitTransfer({
                     itemType: ConduitItemType.ERC20,
-                    token: address(loanOfferPointer.offer.currency),
+                    token: loanOfferPointer.offer.currency,
                     from: loanOfferPointer.offer.lender,
                     to: refinance.lien.lender,
                     identifier: 0,
@@ -429,19 +470,18 @@ contract Kettle is IKettle, OfferController {
                 unchecked {
                     transfers[i + numRefinances] = ConduitTransfer({
                         itemType: ConduitItemType.ERC20,
-                        token: address(loanOfferPointer.offer.currency),
+                        token: loanOfferPointer.offer.currency,
                         from: loanOfferPointer.offer.lender,
                         to: refinance.lien.borrower,
                         identifier: 0,
                         amount: loanAmount - repayAmount
                     });
                 }
-
             } else {
                 /* If new loan is less than the previous, borrower must supply the difference to repay the initial loan. */
                 transfers[i] = ConduitTransfer({
                     itemType: ConduitItemType.ERC20,
-                    token: address(loanOfferPointer.offer.currency),
+                    token: loanOfferPointer.offer.currency,
                     from: loanOfferPointer.offer.lender,
                     to: refinance.lien.lender,
                     identifier: 0,
@@ -451,7 +491,7 @@ contract Kettle is IKettle, OfferController {
                 unchecked {
                     transfers[i + numRefinances] = ConduitTransfer({
                         itemType: ConduitItemType.ERC20,
-                        token: address(loanOfferPointer.offer.currency),
+                        token: loanOfferPointer.offer.currency,
                         from: refinance.lien.borrower,
                         to: refinance.lien.lender,
                         identifier: 0,
@@ -489,10 +529,19 @@ contract Kettle is IKettle, OfferController {
         /* Refinance initial loan to new loan (loanAmount must be within lender range) */
         _refinance(lien, lienId, loanAmount, offer, signature);
 
-        uint256 repayAmount = getRepaymentAmount(lien.borrowAmount, lien.rate, lien.duration);
+        uint256 repayAmount = getRepaymentAmount(
+            lien.borrowAmount,
+            lien.rate,
+            lien.duration
+        );
 
         /* Transfer fees */
-        uint256 totalFees = payFees(address(offer.currency), offer.lender, loanAmount, offer.fees);
+        uint256 totalFees = payFees(
+            offer.currency,
+            offer.lender,
+            loanAmount,
+            offer.fees
+        );
         unchecked {
             loanAmount -= totalFees;
         }
@@ -501,7 +550,7 @@ contract Kettle is IKettle, OfferController {
             /* If new loan is more than the previous, repay the initial loan and send the remaining to the borrower. */
             transfers[0] = ConduitTransfer({
                 itemType: ConduitItemType.ERC20,
-                token: address(offer.currency),
+                token: offer.currency,
                 from: offer.lender,
                 to: lien.lender,
                 identifier: 0,
@@ -511,7 +560,7 @@ contract Kettle is IKettle, OfferController {
             unchecked {
                 transfers[1] = ConduitTransfer({
                     itemType: ConduitItemType.ERC20,
-                    token: address(offer.currency),
+                    token: offer.currency,
                     from: offer.lender,
                     to: lien.borrower,
                     identifier: 0,
@@ -522,7 +571,7 @@ contract Kettle is IKettle, OfferController {
             /* If new loan is less than the previous, borrower must supply the difference to repay the initial loan. */
             transfers[0] = ConduitTransfer({
                 itemType: ConduitItemType.ERC20,
-                token: address(offer.currency),
+                token: offer.currency,
                 from: offer.lender,
                 to: lien.lender,
                 identifier: 0,
@@ -532,7 +581,7 @@ contract Kettle is IKettle, OfferController {
             unchecked {
                 transfers[1] = ConduitTransfer({
                     itemType: ConduitItemType.ERC20,
-                    token: address(offer.currency),
+                    token: offer.currency,
                     from: lien.borrower,
                     to: lien.lender,
                     identifier: 0,
@@ -575,7 +624,7 @@ contract Kettle is IKettle, OfferController {
         });
 
         unchecked {
-            liens[lienId]= keccak256(abi.encode(newLien));
+            liens[lienId] = keccak256(abi.encode(newLien));
         }
 
         /* Take the loan offer. */
@@ -583,8 +632,8 @@ contract Kettle is IKettle, OfferController {
 
         emit Refinance(
             lienId,
-            address(offer.collection),
-            address(offer.currency),
+            offer.collection,
+            offer.currency,
             lien.amount,
             lien.lender,
             newLien.lender,
@@ -628,15 +677,17 @@ contract Kettle is IKettle, OfferController {
 
             /* Seize collateral to lender. */
             transfers[i] = ConduitTransfer({
-                itemType: ConduitItemType(Helpers.getCollateralType(uint8(lien.collateralType))),
-                token: address(lien.collection),
+                itemType: ConduitItemType(
+                    Helpers.getCollateralType(uint8(lien.collateralType))
+                ),
+                token: lien.collection,
                 from: getEscrow(lien.collection),
                 to: lien.lender,
                 identifier: lien.tokenId,
                 amount: lien.amount
             });
 
-            emit Seize(lienId, address(lien.collection));
+            emit Seize(lienId, lien.collection);
 
             unchecked {
                 ++i;
@@ -701,7 +752,10 @@ contract Kettle is IKettle, OfferController {
         _;
     }
 
-    function _validateLien(Lien calldata lien, uint256 lienId) internal view returns (bool) {
+    function _validateLien(
+        Lien calldata lien,
+        uint256 lienId
+    ) internal view returns (bool) {
         return liens[lienId] == keccak256(abi.encode(lien));
     }
 
