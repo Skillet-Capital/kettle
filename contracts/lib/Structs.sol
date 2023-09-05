@@ -8,6 +8,11 @@ enum CollateralType {
     ERC1155_WITH_CRITERIA
 }
 
+enum Side {
+    BORROWER,
+    LENDER
+}
+
 struct LienPointer {
     Lien lien;
     uint256 lienId;
@@ -28,7 +33,8 @@ struct Lien {
 }
 
 struct LoanOffer {
-    address lender;
+    address signer;
+    uint8 side;
     address collection;
     address currency;
     CollateralType collateralType;

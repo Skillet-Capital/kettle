@@ -55,7 +55,7 @@ abstract contract Signatures is ISignatures {
         bytes calldata signature
     ) external view returns (bool) {
         bytes32 offerHash = _hashOffer(offer);
-        _verifyOfferAuthorization(offerHash, offer.lender, signature);
+        _verifyOfferAuthorization(offerHash, offer.signer, signature);
         return true;
     }
 
@@ -93,7 +93,8 @@ abstract contract Signatures is ISignatures {
         loanOfferTypehash = keccak256(
             bytes.concat(
                 "LoanOffer(",
-                "address lender,",
+                "address signer,",
+                "uint8 side,",
                 "address collection,",
                 "address currency,",
                 "uint8 collateralType,",
@@ -153,10 +154,11 @@ abstract contract Signatures is ISignatures {
             keccak256(
                 abi.encode(
                     _LOAN_OFFER_TYPEHASH,
-                    offer.lender,
+                    offer.signer,
+                    offer.side,
                     offer.collection,
                     offer.currency,
-                    uint8(offer.collateralType),
+                    offer.collateralType,
                     offer.collateralIdentifier,
                     offer.collateralAmount,
                     offer.totalAmount,

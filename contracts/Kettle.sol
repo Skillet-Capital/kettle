@@ -148,7 +148,7 @@ contract Kettle is IKettle, OfferController {
             /* Transfer fees from lender */
             uint256 totalFees = payFees(
                 loan.offer.currency,
-                loan.offer.lender,
+                loan.offer.signer,
                 fullfillment.loanAmount,
                 loan.offer.fees
             );
@@ -158,7 +158,7 @@ contract Kettle is IKettle, OfferController {
                 transfers[i + numFills] = ConduitTransfer({
                     itemType: ConduitItemType.ERC20,
                     token: loan.offer.currency,
-                    from: loan.offer.lender,
+                    from: loan.offer.signer,
                     to: borrower,
                     identifier: 0,
                     amount: fullfillment.loanAmount - totalFees
@@ -175,6 +175,8 @@ contract Kettle is IKettle, OfferController {
      * @param signature Lender offer signature
      * @param loanAmount Loan amount in ETH
      * @param collateralTokenId Token id to provide as collateral
+     * @param borrower Address of borrower for loan consumption
+     * @param proof merkle proof for criteria based loan offers
      * @return lienId New lien id
      */
     function borrow(
@@ -221,7 +223,7 @@ contract Kettle is IKettle, OfferController {
         /* Transfer fees from lender */
         uint256 totalFees = payFees(
             offer.currency,
-            offer.lender,
+            offer.signer,
             loanAmount,
             offer.fees
         );
@@ -231,7 +233,7 @@ contract Kettle is IKettle, OfferController {
             transfers[1] = ConduitTransfer({
                 itemType: ConduitItemType.ERC20,
                 token: offer.currency,
-                from: offer.lender,
+                from: offer.signer,
                 to: borrower,
                 identifier: 0,
                 amount: loanAmount - totalFees
@@ -257,7 +259,7 @@ contract Kettle is IKettle, OfferController {
         address borrower
     ) internal returns (uint256 lienId) {
         Lien memory lien = Lien({
-            lender: offer.lender,
+            lender: offer.signer,
             borrower: borrower,
             collateralType: uint8(offer.collateralType),
             collection: offer.collection,
@@ -447,7 +449,7 @@ contract Kettle is IKettle, OfferController {
             /* Transfer fees */
             uint256 totalFees = payFees(
                 loanOfferPointer.offer.currency,
-                loanOfferPointer.offer.lender,
+                loanOfferPointer.offer.signer,
                 refinance.loanAmount,
                 loanOfferPointer.offer.fees
             );
@@ -461,7 +463,7 @@ contract Kettle is IKettle, OfferController {
                 transfers[i] = ConduitTransfer({
                     itemType: ConduitItemType.ERC20,
                     token: loanOfferPointer.offer.currency,
-                    from: loanOfferPointer.offer.lender,
+                    from: loanOfferPointer.offer.signer,
                     to: refinance.lien.lender,
                     identifier: 0,
                     amount: repayAmount
@@ -471,7 +473,7 @@ contract Kettle is IKettle, OfferController {
                     transfers[i + numRefinances] = ConduitTransfer({
                         itemType: ConduitItemType.ERC20,
                         token: loanOfferPointer.offer.currency,
-                        from: loanOfferPointer.offer.lender,
+                        from: loanOfferPointer.offer.signer,
                         to: refinance.lien.borrower,
                         identifier: 0,
                         amount: loanAmount - repayAmount
@@ -482,7 +484,7 @@ contract Kettle is IKettle, OfferController {
                 transfers[i] = ConduitTransfer({
                     itemType: ConduitItemType.ERC20,
                     token: loanOfferPointer.offer.currency,
-                    from: loanOfferPointer.offer.lender,
+                    from: loanOfferPointer.offer.signer,
                     to: refinance.lien.lender,
                     identifier: 0,
                     amount: loanAmount
@@ -538,7 +540,7 @@ contract Kettle is IKettle, OfferController {
         /* Transfer fees */
         uint256 totalFees = payFees(
             offer.currency,
-            offer.lender,
+            offer.signer,
             loanAmount,
             offer.fees
         );
@@ -551,7 +553,7 @@ contract Kettle is IKettle, OfferController {
             transfers[0] = ConduitTransfer({
                 itemType: ConduitItemType.ERC20,
                 token: offer.currency,
-                from: offer.lender,
+                from: offer.signer,
                 to: lien.lender,
                 identifier: 0,
                 amount: repayAmount
@@ -561,7 +563,7 @@ contract Kettle is IKettle, OfferController {
                 transfers[1] = ConduitTransfer({
                     itemType: ConduitItemType.ERC20,
                     token: offer.currency,
-                    from: offer.lender,
+                    from: offer.signer,
                     to: lien.borrower,
                     identifier: 0,
                     amount: loanAmount - repayAmount
@@ -572,7 +574,7 @@ contract Kettle is IKettle, OfferController {
             transfers[0] = ConduitTransfer({
                 itemType: ConduitItemType.ERC20,
                 token: offer.currency,
-                from: offer.lender,
+                from: offer.signer,
                 to: lien.lender,
                 identifier: 0,
                 amount: loanAmount
@@ -610,7 +612,7 @@ contract Kettle is IKettle, OfferController {
 
         /* Update lien with new loan details. */
         Lien memory newLien = Lien({
-            lender: offer.lender,
+            lender: offer.signer,
             borrower: lien.borrower,
             collateralType: uint8(offer.collateralType),
             collection: lien.collection,

@@ -36,7 +36,7 @@ abstract contract OfferController is IOfferController, Signatures {
 
         _validateOffer(
             hash,
-            offer.lender,
+            offer.signer,
             signature,
             offer.expiration,
             offer.salt
