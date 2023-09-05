@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import { IOfferController } from "./IOfferController.sol";
 
-import { LoanOffer, LoanInput, LoanFullfillment, RepayFullfillment, Lien, LienPointer } from "../lib/Structs.sol";
+import { LoanOffer, BorrowOffer, LoanInput, LoanFullfillment, BorrowOfferInput, RepayFullfillment, Lien, LienPointer } from "../lib/Structs.sol";
 
 interface IKettle is IOfferController {
     event Repay(uint256 lienId, address collection, uint256 amount);
@@ -47,6 +47,18 @@ interface IKettle is IOfferController {
         LoanInput[] calldata loanInputs,
         LoanFullfillment[] calldata fullfillments,
         address borrower
+    ) external returns (uint256[] memory lienIds);
+
+    /*//////////////////////////////////////////////////
+                    LOAN FLOWS
+    //////////////////////////////////////////////////*/
+    function loan(
+        BorrowOffer calldata offer,
+        bytes calldata signature
+    ) external returns (uint256 lienId);
+
+    function loanBatch(
+        BorrowOfferInput[] calldata borrowOffers
     ) external returns (uint256[] memory lienIds);
 
     /*//////////////////////////////////////////////////

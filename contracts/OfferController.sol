@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 import { IOfferController } from "./interfaces/IOfferController.sol";
-import { Lien, LoanOffer } from "./lib/Structs.sol";
+import { Lien, LoanOffer, BorrowOffer } from "./lib/Structs.sol";
 import { Signatures } from "./lib/Signatures.sol";
 
 import { InvalidLoanAmount, InsufficientOffer, RateTooHigh, OfferExpired, OfferUnavailable } from "./lib/Errors.sol";
@@ -32,7 +32,7 @@ abstract contract OfferController is IOfferController, Signatures {
         Lien memory lien,
         uint256 lienId
     ) internal {
-        bytes32 hash = _hashOffer(offer);
+        bytes32 hash = _hashLoanOffer(offer);
 
         _validateOffer(
             hash,
@@ -59,6 +59,53 @@ abstract contract OfferController is IOfferController, Signatures {
         unchecked {
             _amountTaken[hash] = __amountTaken + lien.borrowAmount;
         }
+
+        emit LoanOfferTaken(
+            hash,
+            lienId,
+            lien.lender,
+            lien.borrower,
+            lien.currency,
+            lien.collateralType,
+            lien.collection,
+            lien.tokenId,
+            lien.amount,
+            lien.borrowAmount,
+            lien.rate,
+            lien.duration,
+            block.timestamp
+        );
+    }
+
+    /**
+     * @notice Verifies and takes loan offer
+     * @dev Does not transfer loan and collateral assets; does not update lien hash
+     * @param offer Loan offer
+     * @param signature Lender offer signature
+     * @param lien Lien preimage
+     * @param lienId Lien id
+     */
+    function _takeBorrowOffer(
+        BorrowOffer calldata offer,
+        bytes calldata signature,
+        Lien memory lien,
+        uint256 lienId
+    ) internal {
+        bytes32 hash = _hashBorrowOffer(offer);
+
+        _validateOffer(
+            hash,
+            offer.borrower,
+            signature,
+            offer.expiration,
+            offer.salt
+        );
+
+        if (offer.rate > _LIQUIDATION_THRESHOLD) {
+            revert RateTooHigh();
+        }
+
+        cancelledOrFulfilled[offer.borrower][offer.salt] = 1;
 
         emit LoanOfferTaken(
             hash,

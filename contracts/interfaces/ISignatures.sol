@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { LoanOffer } from "../lib/Structs.sol";
+import { LoanOffer, BorrowOffer } from "../lib/Structs.sol";
 
 interface ISignatures {
     function information()
@@ -9,8 +9,12 @@ interface ISignatures {
         view
         returns (string memory version, bytes32 domainSeparator);
 
-    function getOfferHash(
+    function getLoanOfferHash(
         LoanOffer calldata offer
+    ) external view returns (bytes32);
+
+    function getBorrowOfferHash(
+        BorrowOffer calldata offer
     ) external view returns (bytes32);
 
     function cancelledOrFulfilled(

@@ -1,12 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
+/*//////////////////////////////////////////////////
+                COLLATERAL TYPES
+//////////////////////////////////////////////////*/
+
 enum CollateralType {
     ERC721,
     ERC1155,
     ERC721_WITH_CRITERIA,
     ERC1155_WITH_CRITERIA
 }
+
+/*//////////////////////////////////////////////////
+                LIEN STRUCTS
+//////////////////////////////////////////////////*/
 
 struct LienPointer {
     Lien lien;
@@ -27,13 +35,17 @@ struct Lien {
     uint256 startTime;
 }
 
+/*//////////////////////////////////////////////////
+                LOAN OFFER STRUCTS
+//////////////////////////////////////////////////*/
+
 struct LoanOffer {
     address lender;
     address collection;
-    address currency;
-    CollateralType collateralType;
+    uint8 collateralType;
     uint256 collateralIdentifier;
     uint256 collateralAmount;
+    address currency;
     uint256 totalAmount;
     uint256 minAmount;
     uint256 maxAmount;
@@ -56,10 +68,42 @@ struct LoanFullfillment {
     bytes32[] proof;
 }
 
+/*//////////////////////////////////////////////////
+                BORROW OFFER STRUCTS
+//////////////////////////////////////////////////*/
+
+struct BorrowOffer {
+    address borrower;
+    address collection;
+    uint8 collateralType;
+    uint256 collateralIdentifier;
+    uint256 collateralAmount;
+    address currency;
+    uint256 loanAmount;
+    uint256 duration;
+    uint256 rate;
+    uint256 salt;
+    uint256 expiration;
+    Fee[] fees;
+}
+
+struct BorrowOfferInput {
+    BorrowOffer offer;
+    bytes signature;
+}
+
+/*//////////////////////////////////////////////////
+                REPAY STRUCTS
+//////////////////////////////////////////////////*/
+
 struct RepayFullfillment {
     Lien lien;
     uint256 lienId;
 }
+
+/*//////////////////////////////////////////////////
+                REFINANCE STRUCTS
+//////////////////////////////////////////////////*/
 
 struct RefinanceFullfillment {
     Lien lien;
@@ -68,6 +112,10 @@ struct RefinanceFullfillment {
     uint256 loanAmount;
     bytes32[] proof;
 }
+
+/*//////////////////////////////////////////////////
+                FEE STRUCTS
+//////////////////////////////////////////////////*/
 
 struct Fee {
     uint16 rate;
