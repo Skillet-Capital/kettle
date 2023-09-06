@@ -9,7 +9,7 @@ import { randomBytes } from '@ethersproject/random';
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 
 import { Fee, CollateralType } from "../types";
-import { FeeStruct, LienStruct, LoanOfferStruct } from '../typechain-types/contracts/Kettle';
+import { BorrowOfferStruct, FeeStruct, LienStruct, LoanOfferStruct } from '../typechain-types/contracts/Kettle';
 
 export interface LoanOfferParams {
   collateralType?: CollateralType;
@@ -38,6 +38,37 @@ export async function getLoanOffer(params: LoanOfferParams): Promise<LoanOfferSt
     totalAmount: params.totalAmount,
     minAmount: params.minAmount,
     maxAmount: params.maxAmount,
+    duration: params.duration,
+    rate: params.rate,
+    salt: BigInt(hexlify(randomBytes(32))),
+    expiration: params.expiration,
+    fees: params?.fees ?? []
+  }
+}
+
+export interface BorrowOfferParams {
+  collateralType?: CollateralType;
+  collateralIdentifier: number | string | bigint;
+  collateralAmount?: number | string | bigint;
+  borrower: Addressable;
+  collection: Addressable;
+  currency: Addressable;
+  loanAmount: number | string | bigint;
+  duration: number | string | bigint;
+  rate: number | string | bigint;
+  expiration: number | string | bigint;
+  fees?: FeeStruct[];
+}
+
+export async function getBorrowOffer(params: BorrowOfferParams): Promise<BorrowOfferStruct> {
+  return {
+    borrower: await params.borrower.getAddress(),
+    collection: await params.collection.getAddress(),
+    currency: await params.currency.getAddress(),
+    collateralType: params?.collateralType ?? CollateralType.ERC721,
+    collateralIdentifier: BigInt(params.collateralIdentifier),
+    collateralAmount: params?.collateralAmount ?? 1,
+    loanAmount: params.loanAmount,
     duration: params.duration,
     rate: params.rate,
     salt: BigInt(hexlify(randomBytes(32))),
@@ -139,15 +170,15 @@ export async function signLoanOffer(
     LoanOffer: [
       { name: 'lender', type: 'address' },
       { name: 'collection', type: 'address' },
-      { name: 'currency', type: 'address' },
       { name: 'collateralType', type: 'uint8' },
       { name: 'collateralIdentifier', type: 'uint256' },
       { name: 'collateralAmount', type: 'uint256' },
+      { name: 'currency', type: 'address' },
       { name: 'totalAmount', type: 'uint256' },
       { name: 'minAmount', type: 'uint256' },
       { name: 'maxAmount', type: 'uint256' },
-      { name: 'rate', type: 'uint256' },
       { name: 'duration', type: 'uint256' },
+      { name: 'rate', type: 'uint256' },
       { name: 'salt', type: 'uint256' },
       { name: 'expiration', type: 'uint256' },
       { name: 'fees', type: 'Fee[]' }
@@ -155,4 +186,40 @@ export async function signLoanOffer(
   }
 
   return await lender.signTypedData(domain, types, loanOffer);
+}
+
+export async function signBorrowOffer(
+  kettle: Addressable,
+  borrower: Signer,
+  borrowOffer: BorrowOfferStruct 
+) {
+  const domain = {
+    name: 'Kettle',
+    version: '1',
+    chainId: 1,
+    verifyingContract: await kettle.getAddress()
+  }
+
+  const types = {
+    Fee: [
+      { name: 'rate', type: 'uint16' },
+      { name: 'recipient', type: 'address' }
+    ],
+    BorrowOffer: [
+      { name: 'borrower', type: 'address' },
+      { name: 'collection', type: 'address' },
+      { name: 'collateralType', type: 'uint8' },
+      { name: 'collateralIdentifier', type: 'uint256' },
+      { name: 'collateralAmount', type: 'uint256' },
+      { name: 'currency', type: 'address' },
+      { name: 'loanAmount', type: 'uint256' },
+      { name: 'duration', type: 'uint256' },
+      { name: 'rate', type: 'uint256' },
+      { name: 'salt', type: 'uint256' },
+      { name: 'expiration', type: 'uint256' },
+      { name: 'fees', type: 'Fee[]' }
+    ]
+  }
+
+  return await borrower.signTypedData(domain, types, borrowOffer);
 }

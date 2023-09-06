@@ -9,7 +9,7 @@ import { IKettle } from "./interfaces/IKettle.sol";
 
 import { IConduit, ConduitTransfer, ConduitItemType } from "./interfaces/IConduit.sol";
 
-import { Fee, Lien, LoanOffer, LoanInput, LienPointer, LoanFullfillment, RepayFullfillment, RefinanceFullfillment } from "./lib/Structs.sol";
+import { Fee, Lien, LoanOffer, BorrowOffer, LoanInput, BorrowOfferInput, LienPointer, LoanFullfillment, RepayFullfillment, RefinanceFullfillment } from "./lib/Structs.sol";
 
 import { InvalidLien, Unauthorized, LienIsDefaulted, LienNotDefaulted, CollectionsDoNotMatch, CurrenciesDoNotMatch, NoEscrowImplementation } from "./lib/Errors.sol";
 
@@ -117,18 +117,18 @@ contract Kettle is IKettle, OfferController {
 
         for (uint256 i = 0; i < numFills; i++) {
             LoanFullfillment calldata fullfillment = fullfillments[i];
-            LoanInput calldata loan = loanOffers[fullfillment.loanIndex];
+            LoanInput calldata _loan = loanOffers[fullfillment.loanIndex];
 
             CollateralVerifier.verifyCollateral(
-                uint8(loan.offer.collateralType),
-                loan.offer.collateralIdentifier,
+                uint8(_loan.offer.collateralType),
+                _loan.offer.collateralIdentifier,
                 fullfillment.collateralIdentifier,
                 fullfillment.proof
             );
 
             lienIds[i] = _borrow(
-                loan.offer,
-                loan.signature,
+                _loan.offer,
+                _loan.signature,
                 fullfillment.loanAmount,
                 fullfillment.collateralIdentifier,
                 borrower
@@ -136,29 +136,29 @@ contract Kettle is IKettle, OfferController {
 
             transfers[i] = ConduitTransfer({
                 itemType: ConduitItemType(
-                    Helpers.getCollateralType(uint8(loan.offer.collateralType))
+                    Helpers.getCollateralType(uint8(_loan.offer.collateralType))
                 ),
-                token: loan.offer.collection,
+                token: _loan.offer.collection,
                 from: msg.sender,
-                to: getEscrow(loan.offer.collection),
+                to: getEscrow(_loan.offer.collection),
                 identifier: fullfillment.collateralIdentifier,
-                amount: loan.offer.collateralAmount
+                amount: _loan.offer.collateralAmount
             });
 
             /* Transfer fees from lender */
             uint256 totalFees = payFees(
-                loan.offer.currency,
-                loan.offer.lender,
+                _loan.offer.currency,
+                _loan.offer.lender,
                 fullfillment.loanAmount,
-                loan.offer.fees
+                _loan.offer.fees
             );
 
             /* Transfer loan to borrower. */
             unchecked {
                 transfers[i + numFills] = ConduitTransfer({
                     itemType: ConduitItemType.ERC20,
-                    token: loan.offer.currency,
-                    from: loan.offer.lender,
+                    token: _loan.offer.currency,
+                    from: _loan.offer.lender,
                     to: borrower,
                     identifier: 0,
                     amount: fullfillment.loanAmount - totalFees
@@ -277,6 +277,153 @@ contract Kettle is IKettle, OfferController {
 
         /* Take the loan offer. */
         _takeLoanOffer(offer, signature, lien, lienId);
+    }
+
+    /*//////////////////////////////////////////////////
+                    LOAN FLOWS
+    //////////////////////////////////////////////////*/
+
+    /**
+     * @notice Verifies and starts multiple liens against loan offers; then transfers loan and collateral assets
+     * @param borrowOffers Borrow offers
+     * @return lienIds array of lienIds
+     */
+    function loanBatch(
+        BorrowOfferInput[] calldata borrowOffers
+    ) external returns (uint256[] memory lienIds) {
+
+        uint256 numFills = borrowOffers.length;
+
+        lienIds = new uint256[](numFills);
+
+        ConduitTransfer[] memory transfers = new ConduitTransfer[](
+            numFills * 2
+        );
+
+        for (uint256 i = 0; i < numFills; i++) {
+            BorrowOfferInput calldata _offer = borrowOffers[i];
+
+            lienIds[i] = _loanToBorrower(_offer.offer, _offer.signature);
+
+            transfers[i] = ConduitTransfer({
+                itemType: ConduitItemType(
+                    Helpers.getCollateralType(uint8(_offer.offer.collateralType))
+                ),
+                token: _offer.offer.collection,
+                from: _offer.offer.borrower,
+                to: getEscrow(_offer.offer.collection),
+                identifier: _offer.offer.collateralIdentifier,
+                amount: _offer.offer.collateralAmount
+            });
+
+            /* Transfer fees from lender */
+            uint256 totalFees = payFees(
+                _offer.offer.currency,
+                msg.sender,
+                _offer.offer.loanAmount,
+                _offer.offer.fees
+            );
+
+            /* Transfer loan to borrower. */
+            unchecked {
+                transfers[i + numFills] = ConduitTransfer({
+                    itemType: ConduitItemType.ERC20,
+                    token: _offer.offer.currency,
+                    from: msg.sender,
+                    to: _offer.offer.borrower,
+                    identifier: 0,
+                    amount: _offer.offer.loanAmount - totalFees
+                });
+            }
+        }
+
+        IConduit(conduit).execute(transfers);
+    }
+
+    /**
+     * @notice Verifies and takes loan offer; then transfers loan and collateral assets
+     * @param offer Loan offer
+     * @param signature Lender offer signature
+     * @return lienId New lien id
+     */
+    function loan(
+        BorrowOffer calldata offer,
+        bytes calldata signature
+    ) external returns (uint256 lienId) {
+
+        ConduitTransfer[] memory transfers = new ConduitTransfer[](2);
+
+        lienId = _loanToBorrower(
+            offer,
+            signature
+        );
+
+        /* Lock collateral token. */
+        transfers[0] = ConduitTransfer({
+            itemType: ConduitItemType(
+                Helpers.getCollateralType(uint8(offer.collateralType))
+            ),
+            token: offer.collection,
+            from: offer.borrower,
+            to: getEscrow(offer.collection),
+            identifier: offer.collateralIdentifier,
+            amount: offer.collateralAmount
+        });
+
+        /* Transfer fees from lender */
+        uint256 totalFees = payFees(
+            offer.currency,
+            msg.sender,
+            offer.loanAmount,
+            offer.fees
+        );
+
+        /* Transfer loan to borrower. */
+        unchecked {
+            transfers[1] = ConduitTransfer({
+                itemType: ConduitItemType.ERC20,
+                token: offer.currency,
+                from: msg.sender,
+                to: offer.borrower,
+                identifier: 0,
+                amount: offer.loanAmount - totalFees
+            });
+        }
+
+        IConduit(conduit).execute(transfers);
+    }
+
+    /**
+     * @notice Verifies and takes loan offer; creates new lien
+     * @param offer Loan offer
+     * @param signature Borrower offer signature
+     * @return lienId New lien id
+     */
+    function _loanToBorrower(
+        BorrowOffer calldata offer,
+        bytes calldata signature
+    ) internal returns (uint256 lienId) {
+        Lien memory lien = Lien({
+            lender: msg.sender,
+            borrower: offer.borrower,
+            collateralType: offer.collateralType,
+            collection: offer.collection,
+            amount: offer.collateralAmount,
+            tokenId: offer.collateralIdentifier,
+            currency: offer.currency,
+            borrowAmount: offer.loanAmount,
+            startTime: block.timestamp,
+            duration: offer.duration,
+            rate: offer.rate
+        });
+
+        /* Create lien. */
+        unchecked {
+            liens[lienId = _nextLienId++] = keccak256(abi.encode(lien));
+        }
+
+        /* Take the loan offer. */
+        _takeBorrowOffer(offer, signature, lien, lienId);
     }
 
     /*//////////////////////////////////////////////////

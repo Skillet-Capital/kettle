@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import { Fee, LoanOffer } from "./Structs.sol";
+import { Fee, LoanOffer, BorrowOffer } from "./Structs.sol";
 import { InvalidVParameter, InvalidSignature } from "./Errors.sol";
 import { ISignatures } from "../interfaces/ISignatures.sol";
 
 abstract contract Signatures is ISignatures {
     bytes32 private immutable _LOAN_OFFER_TYPEHASH;
+    bytes32 private immutable _BORROW_OFFER_TYPEHASH;
     bytes32 private immutable _FEE_TYPEHASH;
     bytes32 private immutable _EIP_712_DOMAIN_TYPEHASH;
 
@@ -22,6 +23,7 @@ abstract contract Signatures is ISignatures {
     constructor() {
         (
             _LOAN_OFFER_TYPEHASH,
+            _BORROW_OFFER_TYPEHASH,
             _FEE_TYPEHASH,
             _EIP_712_DOMAIN_TYPEHASH
         ) = _createTypehashes();
@@ -40,23 +42,16 @@ abstract contract Signatures is ISignatures {
         );
     }
 
-    function getOfferHash(
+    function getLoanOfferHash(
         LoanOffer calldata offer
     ) external view returns (bytes32) {
-        return _hashOffer(offer);
+        return _hashLoanOffer(offer);
     }
 
-    function getHashToSign(bytes32 offerHash) external view returns (bytes32) {
-        return _hashToSign(offerHash);
-    }
-
-    function verifyOfferSignature(
-        LoanOffer calldata offer,
-        bytes calldata signature
-    ) external view returns (bool) {
-        bytes32 offerHash = _hashOffer(offer);
-        _verifyOfferAuthorization(offerHash, offer.lender, signature);
-        return true;
+    function getBorrowOfferHash(
+        BorrowOffer calldata offer
+    ) external view returns (bytes32) {
+        return _hashBorrowOffer(offer);
     }
 
     /**
@@ -67,6 +62,7 @@ abstract contract Signatures is ISignatures {
         pure
         returns (
             bytes32 loanOfferTypehash,
+            bytes32 borrowOfferTypehash,
             bytes32 feeTypehash,
             bytes32 eip712DomainTypehash
         )
@@ -90,20 +86,41 @@ abstract contract Signatures is ISignatures {
         );
 
         feeTypehash = keccak256(feeTypestring);
+
         loanOfferTypehash = keccak256(
             bytes.concat(
                 "LoanOffer(",
                 "address lender,",
                 "address collection,",
-                "address currency,",
                 "uint8 collateralType,",
                 "uint256 collateralIdentifier,",
                 "uint256 collateralAmount,",
+                "address currency,",
                 "uint256 totalAmount,",
                 "uint256 minAmount,",
                 "uint256 maxAmount,",
-                "uint256 rate,",
                 "uint256 duration,",
+                "uint256 rate,",
+                "uint256 salt,",
+                "uint256 expiration,",
+                "Fee[] fees",
+                ")",
+                feeTypestring
+            )
+        );
+
+        borrowOfferTypehash = keccak256(
+            bytes.concat(
+                "BorrowOffer(",
+                "address borrower,",
+                "address collection,",
+                "uint8 collateralType,",
+                "uint256 collateralIdentifier,",
+                "uint256 collateralAmount,",
+                "address currency,",
+                "uint256 loanAmount,",
+                "uint256 duration,",
+                "uint256 rate,",
                 "uint256 salt,",
                 "uint256 expiration,",
                 "Fee[] fees",
@@ -146,7 +163,7 @@ abstract contract Signatures is ISignatures {
         return keccak256(abi.encodePacked(feeHashes));
     }
 
-    function _hashOffer(
+    function _hashLoanOffer(
         LoanOffer calldata offer
     ) internal view returns (bytes32) {
         return
@@ -155,15 +172,38 @@ abstract contract Signatures is ISignatures {
                     _LOAN_OFFER_TYPEHASH,
                     offer.lender,
                     offer.collection,
-                    offer.currency,
-                    uint8(offer.collateralType),
+                    offer.collateralType,
                     offer.collateralIdentifier,
                     offer.collateralAmount,
+                    offer.currency,
                     offer.totalAmount,
                     offer.minAmount,
                     offer.maxAmount,
-                    offer.rate,
                     offer.duration,
+                    offer.rate,
+                    offer.salt,
+                    offer.expiration,
+                    _packFees(offer.fees)
+                )
+            );
+    }
+
+    function _hashBorrowOffer(
+        BorrowOffer calldata offer
+    ) internal view returns (bytes32) {
+        return
+            keccak256(
+                abi.encode(
+                    _BORROW_OFFER_TYPEHASH,
+                    offer.borrower,
+                    offer.collection,
+                    offer.collateralType,
+                    offer.collateralIdentifier,
+                    offer.collateralAmount,
+                    offer.currency,
+                    offer.loanAmount,
+                    offer.duration,
+                    offer.rate,
                     offer.salt,
                     offer.expiration,
                     _packFees(offer.fees)
@@ -184,12 +224,12 @@ abstract contract Signatures is ISignatures {
     /**
      * @notice Verify authorization of offer
      * @param offerHash Hash of offer struct
-     * @param lender Lender address
+     * @param signer signer address
      * @param signature Packed offer signature (with oracle signature if necessary)
      */
     function _verifyOfferAuthorization(
         bytes32 offerHash,
-        address lender,
+        address signer,
         bytes calldata signature
     ) internal view {
         bytes32 hashToSign = _hashToSign(offerHash);
@@ -203,8 +243,9 @@ abstract contract Signatures is ISignatures {
             s := calldataload(add(signature.offset, 0x20))
             v := shr(248, calldataload(add(signature.offset, 0x40)))
         }
-        _verify(lender, hashToSign, v, r, s);
+        _verify(signer, hashToSign, v, r, s);
     }
+    
 
     /**
      * @notice Verify signature of digest
