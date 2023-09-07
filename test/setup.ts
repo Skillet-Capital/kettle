@@ -110,11 +110,15 @@ export async function getFixture(): Promise<Fixture> {
 
   /* Set Approvals */
   await testErc721.connect(borrower).setApprovalForAll(conduit, true);
+  await testErc721.connect(borrower).setApprovalForAll(kettle, true);
   await testErc721.connect(lender).setApprovalForAll(conduit, true);
+
   await testErc1155.connect(borrower).setApprovalForAll(conduit, true);
+  await testErc1155.connect(borrower).setApprovalForAll(kettle, true);
   await testErc1155.connect(lender).setApprovalForAll(conduit, true);
 
   await testErc20.connect(lender).approve(conduit, MaxUint256.toBigInt());
+  await testErc20.connect(lender).approve(kettle, MaxUint256.toBigInt());
   await testErc20.connect(borrower).approve(conduit, MaxUint256.toBigInt());
 
   console.log("\n----------------------- Contracts -----------------------");
