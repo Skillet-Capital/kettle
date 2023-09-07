@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+
 import { Helpers } from "./Helpers.sol";
 import { CollateralVerifier } from "./CollateralVerifier.sol";
 import { SafeTransfer } from "./SafeTransfer.sol";
@@ -14,7 +16,7 @@ import { Fee, Lien, LoanOffer, BorrowOffer, LoanInput, BorrowOfferInput, LienPoi
 
 import { InvalidLien, Unauthorized, LienIsDefaulted, LienNotDefaulted, CollectionsDoNotMatch, CurrenciesDoNotMatch, NoEscrowImplementation } from "./lib/Errors.sol";
 
-contract Kettle is IKettle, OfferController, SafeTransfer {
+contract Kettle is IKettle, Ownable, OfferController, SafeTransfer {
     uint256 private constant _BASIS_POINTS = 10_000;
     uint256 private constant _LIQUIDATION_THRESHOLD = 100_000;
     uint256 private _nextLienId;
@@ -23,9 +25,7 @@ contract Kettle is IKettle, OfferController, SafeTransfer {
     mapping(uint256 => bytes32) public liens;
     mapping(address => address) public escrows;
 
-    constructor(address _conduit, address authSigner) OfferController(authSigner) {
-        conduit = _conduit;
-    }
+    constructor(address authSigner) OfferController(authSigner) { }
 
     /*//////////////////////////////////////////////////
                        GETTERS
@@ -50,7 +50,7 @@ contract Kettle is IKettle, OfferController, SafeTransfer {
     /*//////////////////////////////////////////////////
                        SETTERS
     //////////////////////////////////////////////////*/
-    function setEscrow(address collection, address escrow) external {
+    function setEscrow(address collection, address escrow) external onlyOwner {
         escrows[collection] = escrow;
     }
 
