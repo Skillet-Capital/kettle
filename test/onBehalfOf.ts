@@ -41,7 +41,6 @@ describe("Kettle", () => {
   let testErc721: TestERC721;
   let testErc20: TestERC20;
   let erc721Escrow: ERC721EscrowBase;
-  let conduitAddress: string;
 
   let blockTimestamp: number;
 
@@ -54,7 +53,6 @@ describe("Kettle", () => {
       testErc721,
       testErc20,
       erc721Escrow,
-      conduitAddress
     } = await loadFixture(getFixture));
 
     blockTimestamp = await time.latest();

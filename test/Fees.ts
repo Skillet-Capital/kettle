@@ -103,10 +103,28 @@ describe("Kettle", () => {
           duration: DAY_SECONDS * 7,
           rate: 1000,
           expiration: blockTimestamp + DAY_SECONDS * 7,
-          fees: [{
-            rate: 250,
-            recipient: await feeRecipient.getAddress()
-          }]
+          fees: [
+            {
+              rate: 50,
+              recipient: await feeRecipient.getAddress()
+            },
+            {
+              rate: 50,
+              recipient: await feeRecipient.getAddress()
+            },
+            {
+              rate: 50,
+              recipient: await feeRecipient.getAddress()
+            },
+            {
+              rate: 50,
+              recipient: await feeRecipient.getAddress()
+            },
+            {
+              rate: 50,
+              recipient: await feeRecipient.getAddress()
+            }
+          ]
         });
 
         offerSignature = await signLoanOffer(
