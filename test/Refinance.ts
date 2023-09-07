@@ -235,7 +235,7 @@ describe("Kettle", () => {
         );
 
         await testErc20.mint(lender, newLoanAmount);
-        await kettle.connect(borrower).borrowerRefinance(
+        await kettle.connect(borrower).refinance(
           lien,
           lienId,
           newLoanAmount,
@@ -297,7 +297,7 @@ describe("Kettle", () => {
         await testErc20.mint(lender, newLoanAmount);
         expect(await testErc20.balanceOf(lender)).to.equal(newLoanAmount);
 
-        await kettle.connect(borrower).borrowerRefinance(
+        await kettle.connect(borrower).refinance(
           lien,
           lienId,
           newLoanAmount,
@@ -360,7 +360,7 @@ describe("Kettle", () => {
         expect(await testErc20.balanceOf(lender)).to.equal(newLoanAmount);
 
         const tokenProof = generateMerkleProofForToken(tokenIds, tokenId1)
-        await kettle.connect(borrower).borrowerRefinance(
+        await kettle.connect(borrower).refinance(
           lien,
           lienId,
           newLoanAmount,
@@ -417,7 +417,7 @@ describe("Kettle", () => {
         );
         
         await testErc20.mint(lender, newLoanAmount);
-        await expect(kettle.connect(borrower).borrowerRefinance(
+        await expect(kettle.connect(borrower).refinance(
           lien,
           lienId,
           newLoanAmount,
@@ -471,7 +471,7 @@ describe("Kettle", () => {
         );
         
         await testErc20.mint(lender, newLoanAmount);
-        await expect(kettle.connect(borrower).borrowerRefinance(
+        await expect(kettle.connect(borrower).refinance(
           lien,
           lienId,
           newLoanAmount * 2n,
@@ -525,7 +525,7 @@ describe("Kettle", () => {
         );
         
         await testErc20.mint(lender, newLoanAmount);
-        await expect(kettle.connect(lender).borrowerRefinance(
+        await expect(kettle.connect(lender).refinance(
           lien,
           lienId,
           newLoanAmount * 2n,
@@ -579,7 +579,7 @@ describe("Kettle", () => {
         );
         
         await testErc20.mint(lender, newLoanAmount);
-        await expect(kettle.connect(borrower).borrowerRefinance(
+        await expect(kettle.connect(borrower).refinance(
           lien,
           1,
           newLoanAmount,
@@ -635,7 +635,7 @@ describe("Kettle", () => {
         );
 
         await testErc20.mint(lender, newLoanAmount);
-        await expect(kettle.connect(borrower).borrowerRefinance(
+        await expect(kettle.connect(borrower).refinance(
           lien,
           lienId,
           newLoanAmount,
@@ -689,7 +689,7 @@ describe("Kettle", () => {
         );
 
         await testErc20.mint(lender, newLoanAmount);
-        await expect(kettle.connect(borrower).borrowerRefinance(
+        await expect(kettle.connect(borrower).refinance(
           lien,
           lienId,
           newLoanAmount,
@@ -905,7 +905,7 @@ describe("Kettle", () => {
 
         expect(await testErc20.balanceOf(lender)).to.equal(newLoanAmount);
 
-        await kettle.connect(borrower).borrowerRefinanceBatch(
+        await kettle.connect(borrower).refinanceBatch(
           [{ offer: refinanceOffer, offerSignature: refinanceSignature }],
           [
             {
@@ -1000,7 +1000,7 @@ describe("Kettle", () => {
         await testErc20.mint(lender, newLoanAmount);
         expect(await testErc20.balanceOf(lender)).to.equal(newLoanAmount);
 
-        await kettle.connect(borrower).borrowerRefinanceBatch(
+        await kettle.connect(borrower).refinanceBatch(
           [{ offer: refinanceOffer, offerSignature: refinanceSignature }],
           [
             {
@@ -1113,7 +1113,7 @@ describe("Kettle", () => {
         await testErc20.mint(lender, newLoanAmount);
         expect(await testErc20.balanceOf(lender)).to.equal(newLoanAmount);
 
-        await kettle.connect(borrower).borrowerRefinanceBatch(
+        await kettle.connect(borrower).refinanceBatch(
           [
             { offer: refinanceOffer1, offerSignature: refinanceSignature1 },
             { offer: refinanceOffer2, offerSignature: refinanceSignature2 }
@@ -1189,7 +1189,7 @@ describe("Kettle", () => {
         );
         
         await testErc20.mint(lender, newLoanAmount);
-        await expect(kettle.connect(lender).borrowerRefinanceBatch(
+        await expect(kettle.connect(lender).refinanceBatch(
           [
             { offer: refinanceOffer1, offerSignature: refinanceSignature1 },
           ],
@@ -1252,7 +1252,7 @@ describe("Kettle", () => {
         );
 
         await testErc20.mint(lender, newLoanAmount);
-        await expect(kettle.connect(borrower).borrowerRefinanceBatch(
+        await expect(kettle.connect(borrower).refinanceBatch(
           [
             { offer: refinanceOffer1, offerSignature: refinanceSignature1 },
           ],
@@ -1315,7 +1315,7 @@ describe("Kettle", () => {
         );
         
         await testErc20.mint(lender, newLoanAmount);
-        await expect(kettle.connect(borrower).borrowerRefinanceBatch(
+        await expect(kettle.connect(borrower).refinanceBatch(
           [
             { offer: refinanceOffer1, offerSignature: refinanceSignature1 },
           ],
@@ -1379,7 +1379,7 @@ describe("Kettle", () => {
         
         
         await testErc20.mint(lender, newLoanAmount);
-        await expect(kettle.connect(borrower).borrowerRefinanceBatch(
+        await expect(kettle.connect(borrower).refinanceBatch(
           [
             { offer: refinanceOffer1, offerSignature: refinanceSignature1 },
           ],
@@ -1444,7 +1444,7 @@ describe("Kettle", () => {
         );
         
         await testErc20.mint(lender, newLoanAmount);
-        await expect(kettle.connect(borrower).borrowerRefinanceBatch(
+        await expect(kettle.connect(borrower).refinanceBatch(
           [
             { offer: refinanceOffer1, offerSignature: refinanceSignature1 },
           ],
@@ -1603,7 +1603,7 @@ describe("Kettle", () => {
 
         expect(await testErc20.balanceOf(lender)).to.equal(newLoanAmount);
 
-        await kettle.connect(borrower).borrowerRefinance(
+        await kettle.connect(borrower).refinance(
           lien,
           lienId,
           newLoanAmount,
@@ -1830,7 +1830,7 @@ describe("Kettle", () => {
 
         expect(await testErc20.balanceOf(lender)).to.equal(newLoanAmount);
 
-        await kettle.connect(borrower).borrowerRefinanceBatch(
+        await kettle.connect(borrower).refinanceBatch(
           [{ offer: refinanceOffer, offerSignature: refinanceSignature }],
           [
             {

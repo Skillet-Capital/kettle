@@ -63,9 +63,6 @@ contract Kettle is IKettle, OfferController, SafeTransfer {
         uint256 loanAmount,
         Fee[] calldata fees
     ) internal returns (uint256 totalFees) {
-        ConduitTransfer[] memory conduitTransfers = new ConduitTransfer[](
-            fees.length
-        );
 
         totalFees = 0;
         for (uint256 i = 0; i < fees.length; i++) {
@@ -74,22 +71,17 @@ contract Kettle is IKettle, OfferController, SafeTransfer {
                 fees[i].rate
             );
 
-            SafeTransfer.transferERC20(currency, lender, fees[i].recipient, feeAmount);
+            SafeTransfer.transferERC20(
+                currency, 
+                lender, 
+                fees[i].recipient, 
+                feeAmount
+            );
 
-            // conduitTransfers[i] = ConduitTransfer({
-            //     itemType: ConduitItemType.ERC20,
-            //     token: currency,
-            //     from: lender,
-            //     to: fees[i].recipient,
-            //     identifier: 0,
-            //     amount: feeAmount
-            // });
             unchecked {
                 totalFees += feeAmount;
             }
         }
-
-        IConduit(conduit).execute(conduitTransfers);
     }
 
     /*//////////////////////////////////////////////////
@@ -107,88 +99,24 @@ contract Kettle is IKettle, OfferController, SafeTransfer {
         LoanFullfillment[] calldata fullfillments,
         address borrower
     ) external returns (uint256[] memory lienIds) {
-        if (borrower == address(0)) {
-            borrower = msg.sender;
-        }
-
         uint256 numFills = fullfillments.length;
-
         lienIds = new uint256[](numFills);
-
-        // ConduitTransfer[] memory transfers = new ConduitTransfer[](
-        //     numFills * 2
-        // );
 
         for (uint256 i = 0; i < numFills; i++) {
             LoanFullfillment calldata fullfillment = fullfillments[i];
-            LoanInput calldata _offer = loanOffers[fullfillment.loanIndex];
+            LoanInput calldata offer = loanOffers[fullfillment.loanIndex];
 
-            CollateralVerifier.verifyCollateral(
-                _offer.offer.collateralType,
-                _offer.offer.collateralIdentifier,
-                fullfillment.collateralIdentifier,
-                fullfillment.proof
-            );
-
-            lienIds[i] = _borrow(
-                _offer.offer,
+            lienIds[i] = borrow(
+                offer.offer,
                 fullfillment.auth,
-                _offer.offerSignature,
+                offer.offerSignature,
                 fullfillment.authSignature,
                 fullfillment.loanAmount,
                 fullfillment.collateralIdentifier,
-                borrower
+                borrower,
+                fullfillment.proof
             );
-
-            // transfers[i] = ConduitTransfer({
-            //     itemType: ConduitItemType(
-            //         Helpers.getCollateralType(_offer.offer.collateralType)
-            //     ),
-            //     token: _offer.offer.collection,
-            //     from: msg.sender,
-            //     to: getEscrow(_offer.offer.collection),
-            //     identifier: fullfillment.collateralIdentifier,
-            //     amount: _offer.offer.collateralAmount
-            // });
-
-            SafeTransfer.transfer(
-                _offer.offer.collateralType, 
-                _offer.offer.collection, 
-                msg.sender, 
-                getEscrow(_offer.offer.collection), 
-                fullfillment.collateralIdentifier, 
-                _offer.offer.collateralAmount
-            );
-
-            /* Transfer fees from lender */
-            uint256 totalFees = payFees(
-                _offer.offer.currency,
-                _offer.offer.lender,
-                fullfillment.loanAmount,
-                _offer.offer.fees
-            );
-
-            /* Transfer loan to borrower. */
-            unchecked {
-                // transfers[i + numFills] = ConduitTransfer({
-                //     itemType: ConduitItemType.ERC20,
-                //     token: _offer.offer.currency,
-                //     from: _offer.offer.lender,
-                //     to: borrower,
-                //     identifier: 0,
-                //     amount: fullfillment.loanAmount - totalFees
-                // });
-
-                SafeTransfer.transferERC20(
-                    _offer.offer.currency, 
-                    _offer.offer.lender,
-                    borrower, 
-                    fullfillment.loanAmount - totalFees
-                );
-            }
         }
-
-        // IConduit(conduit).execute(transfers);
     }
 
     /**
@@ -199,6 +127,8 @@ contract Kettle is IKettle, OfferController, SafeTransfer {
      * @param authSignature Auth signer signature
      * @param loanAmount Loan amount in ETH
      * @param collateralTokenId Token id to provide as collateral
+     * @param borrower address of borrower
+     * @param proof proof for criteria offer
      * @return lienId New lien id
      */
     function borrow(
@@ -210,15 +140,13 @@ contract Kettle is IKettle, OfferController, SafeTransfer {
         uint256 collateralTokenId,
         address borrower,
         bytes32[] calldata proof
-    ) external returns (uint256 lienId) {
+    ) public returns (uint256 lienId) {
         if (borrower == address(0)) {
             borrower = msg.sender;
         }
 
-        // ConduitTransfer[] memory transfers = new ConduitTransfer[](2);
-
         CollateralVerifier.verifyCollateral(
-            uint8(offer.collateralType),
+            offer.collateralType,
             offer.collateralIdentifier,
             collateralTokenId,
             proof
@@ -233,18 +161,6 @@ contract Kettle is IKettle, OfferController, SafeTransfer {
             collateralTokenId,
             borrower
         );
-
-        // /* Lock collateral token. */
-        // transfers[0] = ConduitTransfer({
-        //     itemType: ConduitItemType(
-        //         Helpers.getCollateralType(offer.collateralType)
-        //     ),
-        //     token: offer.collection,
-        //     from: msg.sender,
-        //     to: getEscrow(offer.collection),
-        //     identifier: collateralTokenId,
-        //     amount: offer.collateralAmount
-        // });
 
         SafeTransfer.transfer(
             offer.collateralType, 
@@ -263,17 +179,8 @@ contract Kettle is IKettle, OfferController, SafeTransfer {
             offer.fees
         );
 
-        /* Transfer loan to borrower. */
+        /* Transfer loan amount to borrower. */
         unchecked {
-            // transfers[1] = ConduitTransfer({
-            //     itemType: ConduitItemType.ERC20,
-            //     token: offer.currency,
-            //     from: offer.lender,
-            //     to: borrower,
-            //     identifier: 0,
-            //     amount: loanAmount - totalFees
-            // });
-
             SafeTransfer.transferERC20(
                 offer.currency, 
                 offer.lender,
@@ -281,8 +188,6 @@ contract Kettle is IKettle, OfferController, SafeTransfer {
                 loanAmount - totalFees
             );
         }
-
-        // IConduit(conduit).execute(transfers);
     }
 
     /**
@@ -341,59 +246,19 @@ contract Kettle is IKettle, OfferController, SafeTransfer {
         BorrowOfferInput[] calldata borrowOffers,
         BorrowFullfillment[] calldata fullfillments
     ) external returns (uint256[] memory lienIds) {
+        lienIds = new uint256[](fullfillments.length);
 
-        uint256 numFills = fullfillments.length;
-
-        lienIds = new uint256[](numFills);
-
-        ConduitTransfer[] memory transfers = new ConduitTransfer[](
-            numFills * 2
-        );
-
-        for (uint256 i = 0; i < numFills; i++) {
+        for (uint256 i = 0; i < fullfillments.length; i++) {
             BorrowFullfillment calldata fullfillment = fullfillments[i];
-            BorrowOfferInput calldata _offer = borrowOffers[fullfillment.offerIndex];
+            BorrowOfferInput calldata offer = borrowOffers[fullfillment.offerIndex];
 
-            lienIds[i] = _loanToBorrower(
-                _offer.offer, 
+            lienIds[i] = loan(
+                offer.offer,
                 fullfillment.auth,
-                _offer.offerSignature,
+                offer.offerSignature,
                 fullfillment.authSignature
             );
-
-            transfers[i] = ConduitTransfer({
-                itemType: ConduitItemType(
-                    Helpers.getCollateralType(_offer.offer.collateralType)
-                ),
-                token: _offer.offer.collection,
-                from: _offer.offer.borrower,
-                to: getEscrow(_offer.offer.collection),
-                identifier: _offer.offer.collateralIdentifier,
-                amount: _offer.offer.collateralAmount
-            });
-
-            /* Transfer fees from lender */
-            uint256 totalFees = payFees(
-                _offer.offer.currency,
-                msg.sender,
-                _offer.offer.loanAmount,
-                _offer.offer.fees
-            );
-
-            /* Transfer loan to borrower. */
-            unchecked {
-                transfers[i + numFills] = ConduitTransfer({
-                    itemType: ConduitItemType.ERC20,
-                    token: _offer.offer.currency,
-                    from: msg.sender,
-                    to: _offer.offer.borrower,
-                    identifier: 0,
-                    amount: _offer.offer.loanAmount - totalFees
-                });
-            }
         }
-
-        IConduit(conduit).execute(transfers);
     }
 
     /**
@@ -409,9 +274,7 @@ contract Kettle is IKettle, OfferController, SafeTransfer {
         OfferAuth calldata auth,
         bytes calldata offerSignature,
         bytes calldata authSignature
-    ) external returns (uint256 lienId) {
-
-        ConduitTransfer[] memory transfers = new ConduitTransfer[](2);
+    ) public returns (uint256 lienId) {
 
         lienId = _loanToBorrower(
             offer,
@@ -420,17 +283,14 @@ contract Kettle is IKettle, OfferController, SafeTransfer {
             authSignature
         );
 
-        /* Lock collateral token. */
-        transfers[0] = ConduitTransfer({
-            itemType: ConduitItemType(
-                Helpers.getCollateralType(uint8(offer.collateralType))
-            ),
-            token: offer.collection,
-            from: offer.borrower,
-            to: getEscrow(offer.collection),
-            identifier: offer.collateralIdentifier,
-            amount: offer.collateralAmount
-        });
+        SafeTransfer.transfer(
+            offer.collateralType,
+            offer.collection,
+            offer.borrower,
+            getEscrow(offer.collection),
+            offer.collateralIdentifier,
+            offer.collateralAmount
+        );
 
         /* Transfer fees from lender */
         uint256 totalFees = payFees(
@@ -440,19 +300,15 @@ contract Kettle is IKettle, OfferController, SafeTransfer {
             offer.fees
         );
 
-        /* Transfer loan to borrower. */
+        /* Transfer loan amount to borrower. */
         unchecked {
-            transfers[1] = ConduitTransfer({
-                itemType: ConduitItemType.ERC20,
-                token: offer.currency,
-                from: msg.sender,
-                to: offer.borrower,
-                identifier: 0,
-                amount: offer.loanAmount - totalFees
-            });
+            SafeTransfer.transferERC20(
+                offer.currency, 
+                msg.sender, 
+                offer.borrower, 
+                offer.loanAmount - totalFees
+            );
         }
-
-        IConduit(conduit).execute(transfers);
     }
 
     /**
@@ -503,41 +359,10 @@ contract Kettle is IKettle, OfferController, SafeTransfer {
     function repayBatch(
         RepayFullfillment[] calldata repayments
     ) external validateLiens(repayments) liensAreActive(repayments) {
-        uint256 numRepays = repayments.length;
-        ConduitTransfer[] memory transfers = new ConduitTransfer[](
-            numRepays * 2
-        );
-
-        for (uint256 i = 0; i < numRepays; i++) {
+        for (uint256 i = 0; i < repayments.length; i++) {
             RepayFullfillment calldata repayment = repayments[i];
-            uint256 _repayAmount = _repay(repayment.lien, repayment.lienId);
-
-            /* Return collateral to borrower. */
-            transfers[i] = ConduitTransfer({
-                itemType: ConduitItemType(
-                    Helpers.getCollateralType(
-                        uint8(repayment.lien.collateralType)
-                    )
-                ),
-                token: repayment.lien.collection,
-                from: getEscrow(repayment.lien.collection),
-                to: repayment.lien.borrower,
-                identifier: repayment.lien.tokenId,
-                amount: repayment.lien.amount
-            });
-
-            /* Repay loan to lender. */
-            transfers[i + numRepays] = ConduitTransfer({
-                itemType: ConduitItemType.ERC20,
-                token: repayment.lien.currency,
-                from: msg.sender,
-                to: repayment.lien.lender,
-                identifier: 0,
-                amount: _repayAmount
-            });
+            repay(repayment.lien, repayment.lienId);
         }
-
-        IConduit(conduit).execute(transfers);
     }
 
     /**
@@ -548,34 +373,24 @@ contract Kettle is IKettle, OfferController, SafeTransfer {
     function repay(
         Lien calldata lien,
         uint256 lienId
-    ) external validateLien(lien, lienId) lienIsActive(lien) {
-        ConduitTransfer[] memory transfers = new ConduitTransfer[](2);
-
+    ) public validateLien(lien, lienId) lienIsActive(lien) {
         uint256 _repayAmount = _repay(lien, lienId);
 
-        /* Return collateral to borrower. */
-        transfers[0] = ConduitTransfer({
-            itemType: ConduitItemType(
-                Helpers.getCollateralType(uint8(lien.collateralType))
-            ),
-            token: lien.collection,
-            from: getEscrow(lien.collection),
-            to: lien.borrower,
-            identifier: lien.tokenId,
-            amount: lien.amount
-        });
+        SafeTransfer.transfer(
+            lien.collateralType,
+            lien.collection,
+            getEscrow(lien.collection),
+            lien.borrower,
+            lien.tokenId,
+            lien.amount
+        );
 
-        /* Repay loan to lender. */
-        transfers[1] = ConduitTransfer({
-            itemType: ConduitItemType.ERC20,
-            token: lien.currency,
-            from: msg.sender,
-            to: lien.lender,
-            identifier: 0,
-            amount: _repayAmount
-        });
-
-        IConduit(conduit).execute(transfers);
+        SafeTransfer.transferERC20(
+            lien.currency,
+            msg.sender, 
+            lien.lender, 
+            _repayAmount
+        );
     }
 
     /**
@@ -604,122 +419,28 @@ contract Kettle is IKettle, OfferController, SafeTransfer {
                     REFINANCE FLOWS
     //////////////////////////////////////////////////*/
 
-    function borrowerRefinanceBatch(
+    function refinanceBatch(
         LoanInput[] calldata loanOffers,
-        RefinanceFullfillment[] calldata refinances
+        RefinanceFullfillment[] calldata fullfillments
     ) external {
-        uint256 numRefinances = refinances.length;
-        ConduitTransfer[] memory transfers = new ConduitTransfer[](
-            numRefinances * 2
-        );
+        for (uint256 i = 0; i < fullfillments.length; i++) {
+            RefinanceFullfillment calldata fullfillment = fullfillments[i];
+            LoanInput calldata offer = loanOffers[fullfillment.loanIndex];
 
-        for (uint256 i = 0; i < numRefinances; i++) {
-            RefinanceFullfillment calldata refinance = refinances[i];
-            LoanInput calldata _offer = loanOffers[refinance.loanIndex];
-
-            /* Verify that sender is borrower */
-            if (msg.sender != refinance.lien.borrower) {
-                revert Unauthorized();
-            }
-
-            /* Verify lien is valid */
-            if (!_validateLien(refinance.lien, refinance.lienId)) {
-                revert InvalidLien();
-            }
-
-            /* Verify lien is  */
-            if (_lienIsDefaulted(refinance.lien)) {
-                revert LienIsDefaulted();
-            }
-
-            /* Verify collateral is takeable by loan offer */
-            CollateralVerifier.verifyCollateral(
-                _offer.offer.collateralType,
-                _offer.offer.collateralIdentifier,
-                refinance.lien.tokenId,
-                refinance.proof
+            refinance(
+                fullfillment.lien,
+                fullfillment.lienId,
+                fullfillment.loanAmount,
+                offer.offer,
+                fullfillment.auth,
+                offer.offerSignature,
+                fullfillment.authSignature,
+                fullfillment.proof
             );
-
-            uint256 loanAmount = refinance.loanAmount;
-
-            /* Refinance initial loan to new loan (loanAmount must be within lender range) */
-            _refinance(
-                refinance.lien,
-                refinance.lienId,
-                loanAmount,
-                _offer.offer,
-                refinance.auth,
-                _offer.offerSignature,
-                refinance.authSignature
-            );
-
-            uint256 repayAmount = getRepaymentAmount(
-                refinance.lien.borrowAmount,
-                refinance.lien.rate,
-                refinance.lien.duration
-            );
-
-            /* Transfer fees */
-            uint256 totalFees = payFees(
-                _offer.offer.currency,
-                _offer.offer.lender,
-                refinance.loanAmount,
-                _offer.offer.fees
-            );
-
-            unchecked {
-                loanAmount -= totalFees;
-            }
-
-            if (loanAmount >= repayAmount) {
-                /* If new loan is more than the previous, repay the initial loan and send the remaining to the borrower. */
-                transfers[i] = ConduitTransfer({
-                    itemType: ConduitItemType.ERC20,
-                    token: _offer.offer.currency,
-                    from: _offer.offer.lender,
-                    to: refinance.lien.lender,
-                    identifier: 0,
-                    amount: repayAmount
-                });
-
-                unchecked {
-                    transfers[i + numRefinances] = ConduitTransfer({
-                        itemType: ConduitItemType.ERC20,
-                        token: _offer.offer.currency,
-                        from: _offer.offer.lender,
-                        to: refinance.lien.borrower,
-                        identifier: 0,
-                        amount: loanAmount - repayAmount
-                    });
-                }
-            } else {
-                /* If new loan is less than the previous, borrower must supply the difference to repay the initial loan. */
-                transfers[i] = ConduitTransfer({
-                    itemType: ConduitItemType.ERC20,
-                    token: _offer.offer.currency,
-                    from: _offer.offer.lender,
-                    to: refinance.lien.lender,
-                    identifier: 0,
-                    amount: loanAmount
-                });
-
-                unchecked {
-                    transfers[i + numRefinances] = ConduitTransfer({
-                        itemType: ConduitItemType.ERC20,
-                        token: _offer.offer.currency,
-                        from: refinance.lien.borrower,
-                        to: refinance.lien.lender,
-                        identifier: 0,
-                        amount: repayAmount - loanAmount
-                    });
-                }
-            }
         }
-
-        IConduit(conduit).execute(transfers);
     }
 
-    function borrowerRefinance(
+    function refinance(
         Lien calldata lien,
         uint256 lienId,
         uint256 loanAmount,
@@ -728,12 +449,10 @@ contract Kettle is IKettle, OfferController, SafeTransfer {
         bytes calldata offerSignature,
         bytes calldata authSignature,
         bytes32[] calldata proof
-    ) external validateLien(lien, lienId) lienIsActive(lien) {
+    ) public validateLien(lien, lienId) lienIsActive(lien) {
         if (msg.sender != lien.borrower) {
             revert Unauthorized();
         }
-
-        ConduitTransfer[] memory transfers = new ConduitTransfer[](2);
 
         /* Verify collateral is takeable by loan offer */
         CollateralVerifier.verifyCollateral(
@@ -765,49 +484,17 @@ contract Kettle is IKettle, OfferController, SafeTransfer {
 
         if (loanAmount >= repayAmount) {
             /* If new loan is more than the previous, repay the initial loan and send the remaining to the borrower. */
-            transfers[0] = ConduitTransfer({
-                itemType: ConduitItemType.ERC20,
-                token: offer.currency,
-                from: offer.lender,
-                to: lien.lender,
-                identifier: 0,
-                amount: repayAmount
-            });
-
+            SafeTransfer.transferERC20(offer.currency, offer.lender, lien.lender, repayAmount);
             unchecked {
-                transfers[1] = ConduitTransfer({
-                    itemType: ConduitItemType.ERC20,
-                    token: offer.currency,
-                    from: offer.lender,
-                    to: lien.borrower,
-                    identifier: 0,
-                    amount: loanAmount - repayAmount
-                });
+                SafeTransfer.transferERC20(offer.currency, offer.lender, lien.borrower, loanAmount - repayAmount);
             }
         } else {
             /* If new loan is less than the previous, borrower must supply the difference to repay the initial loan. */
-            transfers[0] = ConduitTransfer({
-                itemType: ConduitItemType.ERC20,
-                token: offer.currency,
-                from: offer.lender,
-                to: lien.lender,
-                identifier: 0,
-                amount: loanAmount
-            });
-
+            SafeTransfer.transferERC20(offer.currency, offer.lender, lien.lender, loanAmount);
             unchecked {
-                transfers[1] = ConduitTransfer({
-                    itemType: ConduitItemType.ERC20,
-                    token: offer.currency,
-                    from: lien.borrower,
-                    to: lien.lender,
-                    identifier: 0,
-                    amount: repayAmount - loanAmount
-                });
+                SafeTransfer.transferERC20(offer.currency, lien.borrower, lien.lender, repayAmount - loanAmount);
             }
         }
-
-        IConduit(conduit).execute(transfers);
     }
 
     function _refinance(
@@ -873,7 +560,6 @@ contract Kettle is IKettle, OfferController, SafeTransfer {
      */
     function seize(LienPointer[] calldata lienPointers) external {
         uint256 length = lienPointers.length;
-        ConduitTransfer[] memory transfers = new ConduitTransfer[](length);
 
         for (uint256 i; i < length; ) {
             Lien calldata lien = lienPointers[i].lien;
@@ -895,16 +581,14 @@ contract Kettle is IKettle, OfferController, SafeTransfer {
             delete liens[lienId];
 
             /* Seize collateral to lender. */
-            transfers[i] = ConduitTransfer({
-                itemType: ConduitItemType(
-                    Helpers.getCollateralType(uint8(lien.collateralType))
-                ),
-                token: lien.collection,
-                from: getEscrow(lien.collection),
-                to: lien.lender,
-                identifier: lien.tokenId,
-                amount: lien.amount
-            });
+            SafeTransfer.transfer(
+                lien.collateralType, 
+                lien.collection, 
+                getEscrow(lien.collection), 
+                lien.lender, 
+                lien.tokenId, 
+                lien.amount
+            );
 
             emit Seize(lienId, lien.collection);
 
@@ -912,8 +596,6 @@ contract Kettle is IKettle, OfferController, SafeTransfer {
                 ++i;
             }
         }
-
-        IConduit(conduit).execute(transfers);
     }
 
     /*/////////////////////////////////////////////////////////////

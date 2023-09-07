@@ -190,7 +190,7 @@ describe("Kettle", () => {
         );
 
         await testErc20.mint(onBehalfOf, repaymentAmount - await testErc20.balanceOf(onBehalfOf.getAddress()));
-        await testErc20.connect(onBehalfOf).approve(conduitAddress, repaymentAmount);
+        await testErc20.connect(onBehalfOf).approve(kettle, repaymentAmount);
 
         await kettle.connect(onBehalfOf).repay(lien, lienId);
 
@@ -329,7 +329,7 @@ describe("Kettle", () => {
         );
 
         await testErc20.mint(onBehalfOf, repaymentAmount - await testErc20.balanceOf(onBehalfOf.getAddress()));
-        await testErc20.connect(onBehalfOf).approve(conduitAddress, repaymentAmount);
+        await testErc20.connect(onBehalfOf).approve(kettle, repaymentAmount);
 
         await kettle.connect(onBehalfOf).repayBatch(lienPointers);
 
