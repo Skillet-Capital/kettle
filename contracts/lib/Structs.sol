@@ -12,6 +12,13 @@ enum CollateralType {
     ERC1155_WITH_CRITERIA
 }
 
+struct Collateral {
+    uint8 collateralType;
+    address collection;
+    uint256 collateralId;
+    uint256 collateralAmount;
+}
+
 /*//////////////////////////////////////////////////
                 LIEN STRUCTS
 //////////////////////////////////////////////////*/
@@ -58,7 +65,7 @@ struct LoanOffer {
 
 struct LoanInput {
     LoanOffer offer;
-    bytes signature;
+    bytes offerSignature;
 }
 
 struct LoanFullfillment {
@@ -66,6 +73,8 @@ struct LoanFullfillment {
     uint256 loanAmount;
     uint256 collateralIdentifier;
     bytes32[] proof;
+    OfferAuth auth;
+    bytes authSignature;
 }
 
 /*//////////////////////////////////////////////////
@@ -89,7 +98,13 @@ struct BorrowOffer {
 
 struct BorrowOfferInput {
     BorrowOffer offer;
-    bytes signature;
+    bytes offerSignature;
+}
+
+struct BorrowFullfillment {
+    uint256 offerIndex;
+    OfferAuth auth;
+    bytes authSignature;
 }
 
 /*//////////////////////////////////////////////////
@@ -111,6 +126,8 @@ struct RefinanceFullfillment {
     uint256 loanIndex;
     uint256 loanAmount;
     bytes32[] proof;
+    OfferAuth auth;
+    bytes authSignature;
 }
 
 /*//////////////////////////////////////////////////
@@ -120,4 +137,14 @@ struct RefinanceFullfillment {
 struct Fee {
     uint16 rate;
     address recipient;
+}
+
+/*//////////////////////////////////////////////////
+                AUTH STRUCTS
+//////////////////////////////////////////////////*/
+struct OfferAuth {
+    bytes32 offerHash;
+    address taker;
+    uint256 expiration;
+    bytes32 collateralHash;
 }

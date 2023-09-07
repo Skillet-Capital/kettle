@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import { Fee, LoanOffer, BorrowOffer } from "./Structs.sol";
+import { Fee, LoanOffer, BorrowOffer, OfferAuth, Collateral } from "./Structs.sol";
 import { InvalidVParameter, InvalidSignature } from "./Errors.sol";
 import { ISignatures } from "../interfaces/ISignatures.sol";
 
 abstract contract Signatures is ISignatures {
     bytes32 private immutable _LOAN_OFFER_TYPEHASH;
     bytes32 private immutable _BORROW_OFFER_TYPEHASH;
+    bytes32 private immutable _COLLATERAL_TYPEHASH;
+    bytes32 private immutable _OFFER_AUTH_TYPEHASH;
     bytes32 private immutable _FEE_TYPEHASH;
     bytes32 private immutable _EIP_712_DOMAIN_TYPEHASH;
 
@@ -25,6 +27,8 @@ abstract contract Signatures is ISignatures {
             _LOAN_OFFER_TYPEHASH,
             _BORROW_OFFER_TYPEHASH,
             _FEE_TYPEHASH,
+            _COLLATERAL_TYPEHASH,
+            _OFFER_AUTH_TYPEHASH,
             _EIP_712_DOMAIN_TYPEHASH
         ) = _createTypehashes();
     }
@@ -64,6 +68,8 @@ abstract contract Signatures is ISignatures {
             bytes32 loanOfferTypehash,
             bytes32 borrowOfferTypehash,
             bytes32 feeTypehash,
+            bytes32 collateralTypehash,
+            bytes32 offerAuthTypehash,
             bytes32 eip712DomainTypehash
         )
     {
@@ -126,6 +132,28 @@ abstract contract Signatures is ISignatures {
                 "Fee[] fees",
                 ")",
                 feeTypestring
+            )
+        );
+
+        collateralTypehash = keccak256(
+            bytes.concat(
+                "Collateral(",
+                "uint8 collateralType,",
+                "address collection,",
+                "uint256 collateralId,",
+                "uint256 collateralAmount"
+                ")"
+            )
+        );
+
+        offerAuthTypehash = keccak256(
+            bytes.concat(
+                "OfferAuth(",
+                "bytes32 offerHash,",
+                "address taker,"
+                "uint256 expiration,",
+                "bytes32 collateralHash",
+                ")"
             )
         );
     }
@@ -207,6 +235,39 @@ abstract contract Signatures is ISignatures {
                     offer.salt,
                     offer.expiration,
                     _packFees(offer.fees)
+                )
+            );
+    }
+
+    function _hashCollateral(
+        uint8 collateralType,
+        address collection,
+        uint256 collateralId,
+        uint256 collateralAmount
+    ) internal view returns (bytes32) {
+        return 
+            keccak256(
+                abi.encode(
+                    _COLLATERAL_TYPEHASH, 
+                    collateralType, 
+                    collection,
+                    collateralId,
+                    collateralAmount
+                )
+            );
+    }
+
+    function _hashOfferAuth(
+        OfferAuth calldata auth
+    ) internal view returns (bytes32) {
+        return
+            keccak256(
+                abi.encode(
+                    _OFFER_AUTH_TYPEHASH,
+                    auth.offerHash,
+                    auth.taker,
+                    auth.expiration,
+                    auth.collateralHash
                 )
             );
     }

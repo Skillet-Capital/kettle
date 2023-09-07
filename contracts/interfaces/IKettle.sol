@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import { IOfferController } from "./IOfferController.sol";
 
-import { LoanOffer, BorrowOffer, LoanInput, LoanFullfillment, BorrowOfferInput, RepayFullfillment, Lien, LienPointer } from "../lib/Structs.sol";
+import { OfferAuth, LoanOffer, BorrowOffer, LoanInput, LoanFullfillment, BorrowOfferInput, BorrowFullfillment, RepayFullfillment, RefinanceFullfillment, Lien, LienPointer } from "../lib/Structs.sol";
 
 interface IKettle is IOfferController {
     event Repay(uint256 lienId, address collection, uint256 amount);
@@ -36,15 +36,17 @@ interface IKettle is IOfferController {
     //////////////////////////////////////////////////*/
     function borrow(
         LoanOffer calldata offer,
-        bytes calldata signature,
+        OfferAuth calldata auth,
+        bytes calldata offerSignature,
+        bytes calldata authSignature,
         uint256 loanAmount,
-        uint256 collateralId,
+        uint256 collateralTokenId,
         address borrower,
         bytes32[] calldata proof
     ) external returns (uint256 lienId);
 
     function borrowBatch(
-        LoanInput[] calldata loanInputs,
+        LoanInput[] calldata loanOffers,
         LoanFullfillment[] calldata fullfillments,
         address borrower
     ) external returns (uint256[] memory lienIds);
@@ -54,11 +56,14 @@ interface IKettle is IOfferController {
     //////////////////////////////////////////////////*/
     function loan(
         BorrowOffer calldata offer,
-        bytes calldata signature
+        OfferAuth calldata auth,
+        bytes calldata offerSignature,
+        bytes calldata authSignature
     ) external returns (uint256 lienId);
 
     function loanBatch(
-        BorrowOfferInput[] calldata borrowOffers
+        BorrowOfferInput[] calldata borrowOffers,
+        BorrowFullfillment[] calldata fullfillments
     ) external returns (uint256[] memory lienIds);
 
     /*//////////////////////////////////////////////////
@@ -70,6 +75,25 @@ interface IKettle is IOfferController {
 
     /*//////////////////////////////////////////////////
                     REFINANCING FLOWS
+    //////////////////////////////////////////////////*/
+    function borrowerRefinance(
+        Lien calldata lien,
+        uint256 lienId,
+        uint256 loanAmount,
+        LoanOffer calldata offer,
+        OfferAuth calldata auth,
+        bytes calldata offerSignature,
+        bytes calldata authSignature,
+        bytes32[] calldata proof
+    ) external;
+    
+    function borrowerRefinanceBatch(
+        LoanInput[] calldata loanOffers,
+        RefinanceFullfillment[] calldata refinances
+    ) external;
+
+    /*//////////////////////////////////////////////////
+                    SEIZE FLOWS
     //////////////////////////////////////////////////*/
     function seize(LienPointer[] calldata lienPointers) external;
 }

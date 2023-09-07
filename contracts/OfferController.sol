@@ -2,17 +2,26 @@
 pragma solidity 0.8.19;
 
 import { IOfferController } from "./interfaces/IOfferController.sol";
-import { Lien, LoanOffer, BorrowOffer } from "./lib/Structs.sol";
+import { Lien, LoanOffer, BorrowOffer, OfferAuth, Collateral } from "./lib/Structs.sol";
 import { Signatures } from "./lib/Signatures.sol";
 
-import { InvalidLoanAmount, InsufficientOffer, RateTooHigh, OfferExpired, OfferUnavailable } from "./lib/Errors.sol";
+import { InvalidLoanAmount, InsufficientOffer, RateTooHigh, OfferExpired, OfferUnavailable, UnauthorizedOffer, UnauthorizedCollateral, UnauthorizedTaker, AuthorizationExpired } from "./lib/Errors.sol";
 
 abstract contract OfferController is IOfferController, Signatures {
     uint256 private constant _LIQUIDATION_THRESHOLD = 100_000;
 
     mapping(address => mapping(uint256 => uint256)) public cancelledOrFulfilled;
     mapping(bytes32 => uint256) private _amountTaken;
+    address public _AUTH_SIGNER;
     uint256[50] private _gap;
+
+    constructor (address authSigner) {
+        setAuthSigner(authSigner);
+    }
+
+    function setAuthSigner(address authSigner) public {
+        _AUTH_SIGNER = authSigner;
+    }
 
     function amountTaken(bytes32 offerHash) external view returns (uint256) {
         return _amountTaken[offerHash];
@@ -22,13 +31,17 @@ abstract contract OfferController is IOfferController, Signatures {
      * @notice Verifies and takes loan offer
      * @dev Does not transfer loan and collateral assets; does not update lien hash
      * @param offer Loan offer
-     * @param signature Lender offer signature
+     * @param auth Offer auth
+     * @param offerSignature Lender offer signature
+     * @param authSignature Auth Signer signature
      * @param lien Lien preimage
      * @param lienId Lien id
      */
     function _takeLoanOffer(
         LoanOffer calldata offer,
-        bytes calldata signature,
+        OfferAuth calldata auth,
+        bytes calldata offerSignature,
+        bytes calldata authSignature,
         Lien memory lien,
         uint256 lienId
     ) internal {
@@ -37,9 +50,17 @@ abstract contract OfferController is IOfferController, Signatures {
         _validateOffer(
             hash,
             offer.lender,
-            signature,
+            offerSignature,
             offer.expiration,
             offer.salt
+        );
+
+        _validateAuth(
+            hash, 
+            msg.sender, 
+            auth, 
+            lien, 
+            authSignature
         );
 
         if (offer.rate > _LIQUIDATION_THRESHOLD) {
@@ -81,13 +102,17 @@ abstract contract OfferController is IOfferController, Signatures {
      * @notice Verifies and takes loan offer
      * @dev Does not transfer loan and collateral assets; does not update lien hash
      * @param offer Loan offer
-     * @param signature Lender offer signature
+     * @param auth Offer auth
+     * @param offerSignature Lender offer signature
+     * @param authSignature Auth signer signature
      * @param lien Lien preimage
      * @param lienId Lien id
      */
     function _takeBorrowOffer(
         BorrowOffer calldata offer,
-        bytes calldata signature,
+        OfferAuth calldata auth,
+        bytes calldata offerSignature,
+        bytes calldata authSignature,
         Lien memory lien,
         uint256 lienId
     ) internal {
@@ -96,9 +121,17 @@ abstract contract OfferController is IOfferController, Signatures {
         _validateOffer(
             hash,
             offer.borrower,
-            signature,
+            offerSignature,
             offer.expiration,
             offer.salt
+        );
+
+        _validateAuth(
+            hash, 
+            msg.sender, 
+            auth,
+            lien, 
+            authSignature
         );
 
         if (offer.rate > _LIQUIDATION_THRESHOLD) {
@@ -122,6 +155,47 @@ abstract contract OfferController is IOfferController, Signatures {
             lien.duration,
             block.timestamp
         );
+    }
+
+    function _validateAuth(
+        bytes32 offerHash,
+        address taker,
+        OfferAuth calldata auth,
+        Lien memory lien,
+        bytes calldata signature
+    ) internal view {
+
+        bytes32 collateralHash = _hashCollateral(
+            lien.collateralType,
+            lien.collection,
+            lien.tokenId,
+            lien.amount
+        );
+
+        // console.log(lien.collateralType);
+        // console.log(lien.collection);
+        // console.log(lien.tokenId);
+        // console.log(lien.amount);
+        // console.logBytes32(collateralHash);
+
+        bytes32 authHash = _hashOfferAuth(auth);
+        _verifyOfferAuthorization(authHash, _AUTH_SIGNER, signature);
+
+        if (auth.expiration < block.timestamp) {
+            revert AuthorizationExpired();
+        }
+
+        if (auth.taker != taker) {
+            revert UnauthorizedTaker();
+        }
+
+        if (auth.offerHash != offerHash) {
+            revert UnauthorizedOffer();
+        }
+
+        if (auth.collateralHash != collateralHash) {
+            revert UnauthorizedCollateral();
+        }
     }
 
     /**

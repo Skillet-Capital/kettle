@@ -36,3 +36,9 @@ error UnauthorizedOracle();
 error SignatureExpired();
 error InvalidSignature();
 error InvalidVParameter();
+
+// Auth
+error AuthorizationExpired();
+error UnauthorizedTaker();
+error UnauthorizedOffer();
+error UnauthorizedCollateral();
