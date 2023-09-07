@@ -23,6 +23,7 @@ export interface Fixture {
   borrower: Signer,
   lender: Signer,
   authSigner: Signer,
+  feeRecipient: Signer,
   testErc721: TestERC721;
   testErc1155: TestERC1155;
   testErc20: TestERC20;
@@ -35,7 +36,7 @@ export interface Fixture {
 }
 
 export async function getFixture(): Promise<Fixture> {
-  const [owner, borrower, lender, authSigner] = await ethers.getSigners();
+  const [owner, borrower, lender, authSigner, feeRecipient] = await ethers.getSigners();
 
   /* Deploy Conduit */
   const ConduitController = new ethers.ContractFactory(
@@ -143,6 +144,7 @@ export async function getFixture(): Promise<Fixture> {
     borrower,
     lender,
     authSigner,
+    feeRecipient,
     testErc721,
     testErc1155,
     testErc20,
