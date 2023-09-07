@@ -32,37 +32,10 @@ export interface Fixture {
   verifier: CollateralVerifier;
   erc1155Escrow: ERC1155EscrowBase;
   erc721Escrow: ERC721EscrowBase;
-  conduitAddress: string
 }
 
 export async function getFixture(): Promise<Fixture> {
   const [owner, borrower, lender, authSigner, feeRecipient] = await ethers.getSigners();
-
-  /* Deploy Conduit */
-  const ConduitController = new ethers.ContractFactory(
-    CONDUIT_CONTROLLER_ABI,
-    ConduitControllerBytecode,
-    owner
-  );
-
-  const conduitControllerDeployment = await ConduitController.deploy({ gasLimit: 1e8 });
-  await conduitControllerDeployment.waitForDeployment();
-
-  const conduitController = await ConduitControllerInterface__factory.connect(
-    await conduitControllerDeployment.getAddress(), 
-    owner
-  );
-
-  const conduitKey = hexConcat([owner.address, "0x000000000000000000000000"]);
-  let { conduit, exists } = await conduitController.getConduit(conduitKey);
-
-  if (!exists) {
-    await conduitController.createConduit(
-      conduitKey,
-      owner.address
-    );
-    let { conduit } =  await conduitController.getConduit(conduitKey);
-  }
 
   /* Deploy TestERC721 */
   const testErc721 = await ethers.deployContract("TestERC721");
@@ -90,13 +63,6 @@ export async function getFixture(): Promise<Fixture> {
     gasLimit: 1e8 
   });
 
-  /* Open Conduit Channel */
-  await conduitController.updateChannel(
-    conduit,
-    kettle.getAddress(),
-    true
-  );
-
   /* Deploy ERC721 Escrow */
   const erc721Escrow = await ethers.deployContract("ERC721EscrowBase", [kettle, testErc721.target]);
   await erc721Escrow.waitForDeployment();
@@ -110,24 +76,17 @@ export async function getFixture(): Promise<Fixture> {
   await kettle.setEscrow(testErc1155.getAddress(), erc1155Escrow.getAddress());
 
   /* Set Approvals */
-  await testErc721.connect(borrower).setApprovalForAll(conduit, true);
   await testErc721.connect(borrower).setApprovalForAll(kettle, true);
-  await testErc721.connect(lender).setApprovalForAll(conduit, true);
   await testErc721.connect(lender).setApprovalForAll(kettle, true);
 
-  await testErc1155.connect(borrower).setApprovalForAll(conduit, true);
   await testErc1155.connect(borrower).setApprovalForAll(kettle, true);
-  await testErc1155.connect(lender).setApprovalForAll(conduit, true);
   await testErc1155.connect(lender).setApprovalForAll(kettle, true);
 
-  await testErc20.connect(lender).approve(conduit, MaxUint256.toBigInt());
   await testErc20.connect(lender).approve(kettle, MaxUint256.toBigInt());
-  await testErc20.connect(borrower).approve(conduit, MaxUint256.toBigInt());
   await testErc20.connect(borrower).approve(kettle, MaxUint256.toBigInt());
 
   console.log("\n----------------------- Contracts -----------------------");
   console.log("Kettle:".padEnd(15), await kettle.getAddress());
-  console.log("Conduit:".padEnd(15), conduit);
   console.log("TestERC721:".padEnd(15), await testErc721.getAddress());
   console.log("TestERC1155:".padEnd(15), await testErc1155.getAddress());
   console.log("TestERC20:".padEnd(15), await testErc20.getAddress());
@@ -153,6 +112,5 @@ export async function getFixture(): Promise<Fixture> {
     verifier,
     erc721Escrow,
     erc1155Escrow,
-    conduitAddress: conduit
   }
 };
