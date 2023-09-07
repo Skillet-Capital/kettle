@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+
 import { IOfferController } from "./interfaces/IOfferController.sol";
 import { Lien, LoanOffer, BorrowOffer, OfferAuth, Collateral } from "./lib/Structs.sol";
 import { Signatures } from "./lib/Signatures.sol";
 
 import { InvalidLoanAmount, InsufficientOffer, RateTooHigh, OfferExpired, OfferUnavailable, UnauthorizedOffer, UnauthorizedCollateral, UnauthorizedTaker, AuthorizationExpired } from "./lib/Errors.sol";
 
-contract OfferController is IOfferController, Signatures {
+contract OfferController is IOfferController, Ownable, Signatures {
     uint256 private constant _LIQUIDATION_THRESHOLD = 100_000;
 
     mapping(address => mapping(uint256 => uint256)) public cancelledOrFulfilled;
@@ -19,7 +21,7 @@ contract OfferController is IOfferController, Signatures {
         setAuthSigner(authSigner);
     }
 
-    function setAuthSigner(address authSigner) public {
+    function setAuthSigner(address authSigner) public onlyOwner {
         _AUTH_SIGNER = authSigner;
     }
 

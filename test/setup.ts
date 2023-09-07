@@ -84,7 +84,7 @@ export async function getFixture(): Promise<Fixture> {
   await verifier.waitForDeployment();
 
   /* Deploy Kettle */
-  const kettle = await ethers.deployContract("Kettle", [conduit, authSigner], { 
+  const kettle = await ethers.deployContract("Kettle", [authSigner], { 
     libraries: { Helpers: helpers.target, CollateralVerifier: verifier.target },
     gasLimit: 1e8 
   });
