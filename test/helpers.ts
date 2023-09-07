@@ -9,7 +9,7 @@ import { randomBytes } from '@ethersproject/random';
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 
 import { Fee, CollateralType } from "../types";
-import { BorrowOfferStruct, FeeStruct, LienStruct, LoanOfferStruct } from '../typechain-types/contracts/Kettle';
+import { BorrowOfferStruct, FeeStruct, LienStruct, LoanOfferStruct, OfferAuthStruct } from '../typechain-types/contracts/Kettle';
 
 export interface LoanOfferParams {
   collateralType?: CollateralType;
@@ -221,5 +221,56 @@ export async function signBorrowOffer(
     ]
   }
 
+  // console.log("BorrowHash\t", ethers.TypedDataEncoder.hash(domain, types, borrowOffer))
+
   return await borrower.signTypedData(domain, types, borrowOffer);
+}
+
+export async function hashCollateral(
+  collateralType: number,
+  collection: Addressable,
+  collateralId: BigInt | BigNumberish | number,
+  collateralAmount: BigInt | BigNumber | number
+) {
+  const encoder = new ethers.TypedDataEncoder({
+    Collateral: [
+      { name: "collateralType", type: "uint8" },
+      { name: "collection", type: "address" },
+      { name: "collateralId", type: "uint256" },
+      { name: "collateralAmount", type: "uint256" }
+    ]
+  });
+
+  return encoder.hash({
+    collateralType,
+    collection: await collection.getAddress(),
+    collateralId,
+    collateralAmount
+  })
+}
+
+export async function signOfferAuth(
+  kettle: Addressable,
+  signer: Signer,
+  auth: OfferAuthStruct
+) {
+  const domain = {
+    name: 'Kettle',
+    version: '1',
+    chainId: 1,
+    verifyingContract: await kettle.getAddress()
+  }
+
+  const types = {
+    OfferAuth: [
+      { name: 'offerHash', type: 'bytes32' },
+      { name: 'taker', type: 'address' },
+      { name: 'expiration', type: 'uint256' },
+      { name: 'collateralHash', type: 'bytes32' }
+    ]
+  }
+
+  // console.log("AuthHash\t", ethers.TypedDataEncoder.hash(domain, types, auth))
+
+  return await signer.signTypedData(domain, types, auth);
 }
