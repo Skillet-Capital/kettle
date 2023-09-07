@@ -92,6 +92,7 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer {
      * @notice Verifies and starts multiple liens against loan offers; then transfers loan and collateral assets
      * @param loanOffers Loan offers
      * @param fullfillments Loan offer fullfillments
+     * @param borrower address of borrower (optional)
      * @return lienIds array of lienIds
      */
     function borrowBatch(
@@ -198,6 +199,7 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer {
      * @param authSignature Auth signer signature
      * @param loanAmount Loan amount in ETH
      * @param collateralTokenId Token id to provide as collateral
+     * @param borrower address of borrower (optional)
      * @return lienId New lien id
      */
     function _borrow(
@@ -419,6 +421,11 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer {
                     REFINANCE FLOWS
     //////////////////////////////////////////////////*/
 
+    /**
+     * @notice Refinances multiple liens with new loan offers;
+     * @param loanOffers Loan offers
+     * @param fullfillments Loan offer fullfillments
+     */
     function refinanceBatch(
         LoanInput[] calldata loanOffers,
         RefinanceFullfillment[] calldata fullfillments
@@ -440,6 +447,17 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer {
         }
     }
 
+    /**
+     * @notice Refinance and existing lien with new loan offer
+     * @param lien Existing lien
+     * @param lienId Identifier of existing lien
+     * @param loanAmount Loan amount in ETH
+     * @param offer Loan offer
+     * @param auth Offer auth
+     * @param offerSignature Lender offer signature
+     * @param authSignature Auth signer signature
+     * @param proof proof for criteria offer
+     */
     function refinance(
         Lien calldata lien,
         uint256 lienId,
