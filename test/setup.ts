@@ -1,7 +1,6 @@
 import { ethers } from "hardhat";
 import { Signer } from "ethers";
 import { MaxUint256 } from "@ethersproject/constants";
-import { hexConcat } from "@ethersproject/bytes";
 
 import { 
   Kettle, 
@@ -12,11 +11,7 @@ import {
   CollateralVerifier, 
   ERC721EscrowBase, 
   ERC1155EscrowBase,
-  ConduitControllerInterface__factory
 } from "../typechain-types";
-
-import CONDUIT_CONTROLLER_ABI from "../abis/conduit-controller.json";
-import { ConduitControllerBytecode } from "../abis/conduit-controller-bytecode.json";
 
 export interface Fixture {
   owner: Signer,
