@@ -22,6 +22,7 @@ export interface Fixture {
   owner: Signer,
   borrower: Signer,
   lender: Signer,
+  authSigner: Signer,
   testErc721: TestERC721;
   testErc1155: TestERC1155;
   testErc20: TestERC20;
@@ -34,7 +35,7 @@ export interface Fixture {
 }
 
 export async function getFixture(): Promise<Fixture> {
-  const [owner, borrower, lender] = await ethers.getSigners();
+  const [owner, borrower, lender, authSigner] = await ethers.getSigners();
 
   /* Deploy Conduit */
   const ConduitController = new ethers.ContractFactory(
@@ -83,7 +84,7 @@ export async function getFixture(): Promise<Fixture> {
   await verifier.waitForDeployment();
 
   /* Deploy Kettle */
-  const kettle = await ethers.deployContract("Kettle", [conduit], { 
+  const kettle = await ethers.deployContract("Kettle", [conduit, authSigner], { 
     libraries: { Helpers: helpers.target, CollateralVerifier: verifier.target },
     gasLimit: 1e8 
   });
@@ -134,6 +135,7 @@ export async function getFixture(): Promise<Fixture> {
     owner,
     borrower,
     lender,
+    authSigner,
     testErc721,
     testErc1155,
     testErc20,
