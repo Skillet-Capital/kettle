@@ -97,11 +97,11 @@ export async function getFixture(): Promise<Fixture> {
   );
 
   /* Deploy ERC721 Escrow */
-  const erc721Escrow = await ethers.deployContract("ERC721EscrowBase", [conduit, testErc721.target]);
+  const erc721Escrow = await ethers.deployContract("ERC721EscrowBase", [kettle, testErc721.target]);
   await erc721Escrow.waitForDeployment();
 
   /* deploy ERC1155 Escrow */
-  const erc1155Escrow = await ethers.deployContract("ERC1155EscrowBase", [conduit, testErc1155.target]);
+  const erc1155Escrow = await ethers.deployContract("ERC1155EscrowBase", [kettle, testErc1155.target]);
   await erc1155Escrow.waitForDeployment();
 
   /* Set Escrow */
@@ -110,12 +110,19 @@ export async function getFixture(): Promise<Fixture> {
 
   /* Set Approvals */
   await testErc721.connect(borrower).setApprovalForAll(conduit, true);
+  await testErc721.connect(borrower).setApprovalForAll(kettle, true);
   await testErc721.connect(lender).setApprovalForAll(conduit, true);
+  await testErc721.connect(lender).setApprovalForAll(kettle, true);
+
   await testErc1155.connect(borrower).setApprovalForAll(conduit, true);
+  await testErc1155.connect(borrower).setApprovalForAll(kettle, true);
   await testErc1155.connect(lender).setApprovalForAll(conduit, true);
+  await testErc1155.connect(lender).setApprovalForAll(kettle, true);
 
   await testErc20.connect(lender).approve(conduit, MaxUint256.toBigInt());
+  await testErc20.connect(lender).approve(kettle, MaxUint256.toBigInt());
   await testErc20.connect(borrower).approve(conduit, MaxUint256.toBigInt());
+  await testErc20.connect(borrower).approve(kettle, MaxUint256.toBigInt());
 
   console.log("\n----------------------- Contracts -----------------------");
   console.log("Kettle:".padEnd(15), await kettle.getAddress());

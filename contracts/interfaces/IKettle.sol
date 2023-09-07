@@ -76,7 +76,7 @@ interface IKettle is IOfferController {
     /*//////////////////////////////////////////////////
                     REFINANCING FLOWS
     //////////////////////////////////////////////////*/
-    function borrowerRefinance(
+    function refinance(
         Lien calldata lien,
         uint256 lienId,
         uint256 loanAmount,
@@ -87,9 +87,9 @@ interface IKettle is IOfferController {
         bytes32[] calldata proof
     ) external;
     
-    function borrowerRefinanceBatch(
+    function refinanceBatch(
         LoanInput[] calldata loanOffers,
-        RefinanceFullfillment[] calldata refinances
+        RefinanceFullfillment[] calldata fullfillments
     ) external;
 
     /*//////////////////////////////////////////////////
