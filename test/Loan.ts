@@ -264,9 +264,12 @@ describe("Kettle", () => {
         )).to.be.revertedWithCustomError(kettle, "AuthorizationExpired")
       });
 
-      it('should reject with no escrow implementation', async () => {
+      it('should send to kettle with no escrow implementation', async () => {
         const testErc721_2 = await ethers.deployContract("TestERC721");
         await testErc721_2.waitForDeployment();
+
+        await testErc721_2.mint(borrower, tokenId1);
+        await testErc721_2.connect(borrower).setApprovalForAll(kettle, true);
 
         const borrowOffer2 = await getBorrowOffer({
           collateralType: CollateralType.ERC721,
@@ -308,12 +311,14 @@ describe("Kettle", () => {
           offerAuth2
         );
 
-        await expect(kettle.connect(lender).loan(
+        await kettle.connect(lender).loan(
           borrowOffer2,
           offerAuth2,
           offerSignature2,
           authSignature2
-        )).to.be.revertedWithCustomError(kettle, "NoEscrowImplementation");
+        );
+
+        expect(await testErc721_2.ownerOf(tokenId1)).to.equal(await kettle.getAddress());
       });
     });
 

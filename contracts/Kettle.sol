@@ -2,6 +2,8 @@
 pragma solidity 0.8.19;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { ERC721Holder } from "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
+import { ERC1155Holder } from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 
 import { Helpers } from "./Helpers.sol";
 import { CollateralVerifier } from "./CollateralVerifier.sol";
@@ -16,7 +18,7 @@ import { Fee, Lien, LoanOffer, BorrowOffer, LoanInput, BorrowOfferInput, LienPoi
 
 import { InvalidLien, Unauthorized, LienIsDefaulted, LienNotDefaulted, CollectionsDoNotMatch, CurrenciesDoNotMatch, NoEscrowImplementation } from "./lib/Errors.sol";
 
-contract Kettle is IKettle, Ownable, OfferController, SafeTransfer {
+contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder, ERC1155Holder {
     uint256 private constant _BASIS_POINTS = 10_000;
     uint256 private constant _LIQUIDATION_THRESHOLD = 100_000;
     uint256 private _nextLienId;
@@ -43,7 +45,7 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer {
     ) public view returns (address escrow) {
         escrow = escrows[collection];
         if (escrow == address(0)) {
-            revert NoEscrowImplementation();
+            return address(this);
         }
     }
 
