@@ -240,6 +240,70 @@ describe("Kettle", () => {
         expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
       });
 
+      it.only('should send to kettle with no escrow implementation', async () => {
+        const testErc721_2 = await ethers.deployContract("TestERC721");
+        await testErc721_2.waitForDeployment();
+
+        await testErc721_2.mint(borrower, tokenId1);
+        await testErc721_2.connect(borrower).setApprovalForAll(kettle, true);
+
+        const tokenOffer2 = await getLoanOffer({
+          collateralType: CollateralType.ERC721,
+          collateralIdentifier: tokenId1,
+          lender: lender,
+          collection: testErc721_2,
+          currency: testErc20,
+          totalAmount: loanAmount,
+          minAmount: 0,
+          maxAmount: loanAmount,
+          duration: DAY_SECONDS * 7,
+          rate: 1000,
+          expiration: blockTimestamp + DAY_SECONDS * 7,
+        });
+
+        const offerSignature2 = await signLoanOffer(
+          kettle,
+          lender,
+          tokenOffer2
+        );
+
+        const offerHash2 = await kettle.getLoanOfferHash(tokenOffer2);
+
+        const collateralHash2 = await hashCollateral(
+          CollateralType.ERC721,
+          testErc721_2,
+          tokenId1,
+          1
+        );
+
+        const offerAuth2 = {
+          offerHash: offerHash2,
+          taker: await borrower.getAddress(),
+          expiration: await time.latest() + 100,
+          collateralHash: collateralHash2
+        }
+
+        const authSignature2 = await signOfferAuth(
+          kettle,
+          authSigner,
+          offerAuth2
+        );
+
+        await kettle.connect(borrower).borrow(
+          tokenOffer2,
+          offerAuth2,
+          offerSignature2,
+          authSignature2,
+          loanAmount, 
+          tokenId1,
+          ADDRESS_ZERO,
+          []
+        );
+
+        expect(await testErc721_2.ownerOf(tokenId1)).to.equal(await kettle.getAddress());
+        expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
+      })
+
       it('should reject cancelled loan offer', async () => {
         await kettle.connect(lender).cancelOffer(tokenOffer.salt)
 
@@ -313,64 +377,6 @@ describe("Kettle", () => {
           ADDRESS_ZERO
         )).to.be.revertedWithCustomError(verifier, "InvalidCollateral");
       });
-
-      it('should reject with no escrow implementation', async () => {
-        const testErc721_2 = await ethers.deployContract("TestERC721");
-        await testErc721_2.waitForDeployment();
-
-        const tokenOffer2 = await getLoanOffer({
-          collateralType: CollateralType.ERC721,
-          collateralIdentifier: tokenId1,
-          lender: lender,
-          collection: testErc721_2,
-          currency: testErc20,
-          totalAmount: loanAmount,
-          minAmount: 0,
-          maxAmount: loanAmount,
-          duration: DAY_SECONDS * 7,
-          rate: 1000,
-          expiration: blockTimestamp + DAY_SECONDS * 7,
-        });
-
-        const offerSignature2 = await signLoanOffer(
-          kettle,
-          lender,
-          tokenOffer2
-        );
-
-        const offerHash2 = await kettle.getLoanOfferHash(tokenOffer2);
-
-        const collateralHash2 = await hashCollateral(
-          CollateralType.ERC721,
-          testErc721_2,
-          tokenId1,
-          1
-        );
-
-        const offerAuth2 = {
-          offerHash: offerHash2,
-          taker: await borrower.getAddress(),
-          expiration: await time.latest() + 100,
-          collateralHash: collateralHash2
-        }
-
-        const authSignature2 = await signOfferAuth(
-          kettle,
-          authSigner,
-          offerAuth2
-        );
-
-        await expect(kettle.connect(borrower).borrow(
-          tokenOffer2,
-          offerAuth2,
-          offerSignature2,
-          authSignature2,
-          loanAmount, 
-          1,
-          ADDRESS_ZERO,
-          []
-        )).to.be.revertedWithCustomError(kettle, "NoEscrowImplementation");
-      })
     });
 
     describe("collateralType === ERC721_WITH_CRITERIA", () => {
