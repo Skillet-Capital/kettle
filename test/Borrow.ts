@@ -240,7 +240,7 @@ describe("Kettle", () => {
         expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
       });
 
-      it.only('should send to kettle with no escrow implementation', async () => {
+      it('should send to kettle with no escrow implementation', async () => {
         const testErc721_2 = await ethers.deployContract("TestERC721");
         await testErc721_2.waitForDeployment();
 

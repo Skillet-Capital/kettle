@@ -490,7 +490,7 @@ describe("Kettle", () => {
       });
     });
 
-    describe("Single ERC1155", () => {
+    describe("Single ERC1155 (With Custom Escrow)", () => {
       let lien: LienStruct;
       let lienId: bigint;
 
@@ -545,6 +545,114 @@ describe("Kettle", () => {
           ADDRESS_ZERO,
           []
         );
+
+        ({ lien, lienId } = await txn.wait().then(
+          async (receipt) => {
+            const kettleAddres = await kettle.getAddress();
+            const lienLog = receipt!.logs!.find(
+              (log) => (log.address === kettleAddres)
+            )!;
+  
+            const parsedLog = kettle.interface.decodeEventLog("LoanOfferTaken", lienLog!.data, lienLog!.topics);
+            return {
+              lienId: parsedLog.lienId,
+              lien: formatLien(
+                parsedLog.lender,
+                parsedLog.borrower,
+                parsedLog.collateralType,
+                parsedLog.collection,
+                parsedLog.tokenId,
+                parsedLog.amount,
+                parsedLog.currency,
+                parsedLog.borrowAmount,
+                parsedLog.duration,
+                parsedLog.rate,
+                parsedLog.startTime
+              )
+            }
+          }));
+
+        repaymentAmount = await kettle.getRepaymentAmount(
+          lien.borrowAmount,
+          lien.rate,
+          lien.duration
+        );
+  
+        await testErc20.mint(borrower, repaymentAmount - await testErc20.balanceOf(borrower.getAddress()));
+      });
+
+      it("should repay single loan", async () => {
+        await kettle.connect(borrower).repay(
+          lien,
+          lienId
+        );
+  
+        expect(await testErc1155.balanceOf(borrower, tokenId1)).to.equal(2);
+
+        expect(await testErc20.balanceOf(lender.getAddress())).to.equal(repaymentAmount);
+        expect(await testErc20.balanceOf(borrower.getAddress())).to.equal(0);
+      });
+    });
+
+    describe("Single ERC1155 (Without Custom Escrow)", () => {
+      let lien: LienStruct;
+      let lienId: bigint;
+
+      beforeEach(async () => {
+        await kettle.setEscrow(testErc1155, ADDRESS_ZERO);
+
+        tokenOffer = await getLoanOffer({
+          collateralType: CollateralType.ERC1155,
+          collateralIdentifier: tokenId1,
+          collateralAmount: token1Amount,
+          lender: lender,
+          collection: testErc1155,
+          currency: testErc20,
+          totalAmount: loanAmount,
+          minAmount: 0,
+          maxAmount: loanAmount,
+          duration: DAY_SECONDS * 7,
+          rate: 1000,
+          expiration: blockTimestamp + DAY_SECONDS * 7,
+        });
+
+        tokenSignature = await signLoanOffer(kettle, lender, tokenOffer);
+
+        offerHash = await kettle.getLoanOfferHash(tokenOffer);
+
+        collateralHash = await hashCollateral(
+          CollateralType.ERC1155,
+          testErc1155,
+          tokenId1,
+          token1Amount
+        );
+
+        offerAuth = {
+          offerHash,
+          taker: await borrower.getAddress(),
+          expiration: await time.latest() + 100,
+          collateralHash
+        }
+
+        authSignature = await signOfferAuth(
+          kettle,
+          authSigner,
+          offerAuth
+        );
+
+        /* Start Loan */
+        const txn = await kettle.connect(borrower).borrow(
+          tokenOffer,
+          offerAuth,
+          tokenSignature,
+          authSignature,
+          loanAmount,
+          tokenId1,
+          ADDRESS_ZERO,
+          []
+        );
+
+        expect(await testErc1155.balanceOf(kettle, tokenId1)).to.equal(token1Amount);
 
         ({ lien, lienId } = await txn.wait().then(
           async (receipt) => {
