@@ -12,8 +12,6 @@ import { SafeTransfer } from "./SafeTransfer.sol";
 import { OfferController } from "./OfferController.sol";
 import { IKettle } from "./interfaces/IKettle.sol";
 
-import { IConduit, ConduitTransfer, ConduitItemType } from "./interfaces/IConduit.sol";
-
 import { Fee, Lien, LoanOffer, BorrowOffer, LoanInput, BorrowOfferInput, LienPointer, LoanFullfillment, BorrowFullfillment, RepayFullfillment, RefinanceFullfillment, OfferAuth } from "./lib/Structs.sol";
 
 import { InvalidLien, Unauthorized, LienIsDefaulted, LienNotDefaulted, CollectionsDoNotMatch, CurrenciesDoNotMatch, NoEscrowImplementation } from "./lib/Errors.sol";
@@ -22,7 +20,6 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
     uint256 private constant _BASIS_POINTS = 10_000;
     uint256 private constant _LIQUIDATION_THRESHOLD = 100_000;
     uint256 private _nextLienId;
-    address public conduit;
 
     mapping(uint256 => bytes32) public liens;
     mapping(address => address) public escrows;
