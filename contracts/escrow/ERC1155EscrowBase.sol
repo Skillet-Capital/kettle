@@ -6,7 +6,12 @@ import { ERC1155Holder } from "@openzeppelin/contracts/token/ERC1155/utils/ERC11
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract ERC1155EscrowBase is Ownable, ERC1155Holder {
-    constructor(address conduit, address collection) Ownable() ERC1155Holder() {
-        IERC1155(collection).setApprovalForAll(conduit, true);
+    address public immutable conduit;
+    address public immutable collection;
+
+    constructor(address _conduit, address _collection) Ownable() ERC1155Holder() {
+        IERC1155(_collection).setApprovalForAll(_conduit, true);
+        conduit = _conduit;
+        collection = _collection;
     }
 }
