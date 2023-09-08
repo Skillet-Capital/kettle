@@ -240,6 +240,36 @@ describe("Kettle", () => {
         expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
       });
 
+      it('should reject cancelled loan offer', async () => {
+        await kettle.connect(lender).cancelOffer(tokenOffer.salt)
+
+        await expect(kettle.connect(borrower).borrow(
+          tokenOffer,
+          offerAuth,
+          offerSignature, 
+          authSignature,
+          loanAmount, 
+          tokenId1,
+          ADDRESS_ZERO,
+          []
+        )).to.be.revertedWithCustomError(kettle, "OfferUnavailable");
+      });
+
+      it('should reject invalid loan offer nonce', async () => {
+        await kettle.connect(lender).incrementNonce();
+
+        await expect(kettle.connect(borrower).borrow(
+          tokenOffer,
+          offerAuth,
+          offerSignature, 
+          authSignature,
+          loanAmount, 
+          tokenId1,
+          ADDRESS_ZERO,
+          []
+        )).to.be.revertedWithCustomError(kettle, "InvalidSignature");
+      });
+
       it('should reject with invalid collateral', async () => {
         await expect(kettle.connect(borrower).borrow(
           tokenOffer,

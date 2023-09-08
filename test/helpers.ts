@@ -8,7 +8,8 @@ import { keccak256 } from '@ethersproject/keccak256';
 import { randomBytes } from '@ethersproject/random';
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 
-import { Fee, CollateralType } from "../types";
+import { CollateralType } from "../types";
+import { Kettle } from "../typechain-types";
 import { BorrowOfferStruct, FeeStruct, LienStruct, LoanOfferStruct, OfferAuthStruct } from '../typechain-types/contracts/Kettle';
 
 export interface LoanOfferParams {
@@ -151,7 +152,7 @@ export function formatLien(
 }
 
 export async function signLoanOffer(
-  kettle: Addressable,
+  kettle: Kettle,
   lender: Signer,
   loanOffer: LoanOfferStruct 
 ) {
@@ -168,7 +169,6 @@ export async function signLoanOffer(
       { name: 'recipient', type: 'address' }
     ],
     LoanOffer: [
-      { name: 'lender', type: 'address' },
       { name: 'collection', type: 'address' },
       { name: 'collateralType', type: 'uint8' },
       { name: 'collateralIdentifier', type: 'uint256' },
@@ -181,15 +181,19 @@ export async function signLoanOffer(
       { name: 'rate', type: 'uint256' },
       { name: 'salt', type: 'uint256' },
       { name: 'expiration', type: 'uint256' },
+      { name: 'nonce', type: 'uint256' },
       { name: 'fees', type: 'Fee[]' }
     ]
   }
 
-  return await lender.signTypedData(domain, types, loanOffer);
+  return await lender.signTypedData(domain, types, { 
+    ...loanOffer,
+    nonce: await kettle.nonces(lender),
+  });
 }
 
 export async function signBorrowOffer(
-  kettle: Addressable,
+  kettle: Kettle,
   borrower: Signer,
   borrowOffer: BorrowOfferStruct 
 ) {
@@ -206,7 +210,6 @@ export async function signBorrowOffer(
       { name: 'recipient', type: 'address' }
     ],
     BorrowOffer: [
-      { name: 'borrower', type: 'address' },
       { name: 'collection', type: 'address' },
       { name: 'collateralType', type: 'uint8' },
       { name: 'collateralIdentifier', type: 'uint256' },
@@ -217,13 +220,15 @@ export async function signBorrowOffer(
       { name: 'rate', type: 'uint256' },
       { name: 'salt', type: 'uint256' },
       { name: 'expiration', type: 'uint256' },
+      { name: 'nonce', type: 'uint256' },
       { name: 'fees', type: 'Fee[]' }
     ]
   }
 
-  // console.log("BorrowHash\t", ethers.TypedDataEncoder.hash(domain, types, borrowOffer))
-
-  return await borrower.signTypedData(domain, types, borrowOffer);
+  return await borrower.signTypedData(domain, types, {
+    ...borrowOffer,
+    nonce: await kettle.nonces(borrower)
+  });
 }
 
 export async function hashCollateral(
@@ -269,8 +274,6 @@ export async function signOfferAuth(
       { name: 'collateralHash', type: 'bytes32' }
     ]
   }
-
-  // console.log("AuthHash\t", ethers.TypedDataEncoder.hash(domain, types, auth))
 
   return await signer.signTypedData(domain, types, auth);
 }
