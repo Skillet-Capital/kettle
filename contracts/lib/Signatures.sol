@@ -96,7 +96,6 @@ abstract contract Signatures is ISignatures {
         loanOfferTypehash = keccak256(
             bytes.concat(
                 "LoanOffer(",
-                "address lender,",
                 "address collection,",
                 "uint8 collateralType,",
                 "uint256 collateralIdentifier,",
@@ -109,6 +108,7 @@ abstract contract Signatures is ISignatures {
                 "uint256 rate,",
                 "uint256 salt,",
                 "uint256 expiration,",
+                "uint256 nonce,",
                 "Fee[] fees",
                 ")",
                 feeTypestring
@@ -118,7 +118,6 @@ abstract contract Signatures is ISignatures {
         borrowOfferTypehash = keccak256(
             bytes.concat(
                 "BorrowOffer(",
-                "address borrower,",
                 "address collection,",
                 "uint8 collateralType,",
                 "uint256 collateralIdentifier,",
@@ -129,6 +128,7 @@ abstract contract Signatures is ISignatures {
                 "uint256 rate,",
                 "uint256 salt,",
                 "uint256 expiration,",
+                "uint256 nonce,",
                 "Fee[] fees",
                 ")",
                 feeTypestring
@@ -198,7 +198,6 @@ abstract contract Signatures is ISignatures {
             keccak256(
                 abi.encode(
                     _LOAN_OFFER_TYPEHASH,
-                    offer.lender,
                     offer.collection,
                     offer.collateralType,
                     offer.collateralIdentifier,
@@ -211,6 +210,7 @@ abstract contract Signatures is ISignatures {
                     offer.rate,
                     offer.salt,
                     offer.expiration,
+                    nonces[offer.lender],
                     _packFees(offer.fees)
                 )
             );
@@ -223,7 +223,6 @@ abstract contract Signatures is ISignatures {
             keccak256(
                 abi.encode(
                     _BORROW_OFFER_TYPEHASH,
-                    offer.borrower,
                     offer.collection,
                     offer.collateralType,
                     offer.collateralIdentifier,
@@ -234,6 +233,7 @@ abstract contract Signatures is ISignatures {
                     offer.rate,
                     offer.salt,
                     offer.expiration,
+                    nonces[offer.borrower],
                     _packFees(offer.fees)
                 )
             );
