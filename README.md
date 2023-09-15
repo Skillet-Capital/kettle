@@ -82,6 +82,30 @@ function refinance(
   bytes calldata authSignature,
   bytes32[] calldata proof
 ) external;
+
+/**
+ * Repay
+ * fully repay lien
+ * callable by any address
+ * repayment amount is transferred from msg.sender to lender
+ * collateral is transferred from escrow to lien borrower
+ * @param lien Lien preimage
+ * @param lienId Lien id
+ */
+function repay(
+  Lien calldata lien, 
+  uint256 lienId
+) external;
+
+/**
+ * Seize
+ * callable by lender
+ * seize one or more loans in default
+ * each loan must be defaulted in order to seize all
+ * transfers collateral from escrow to lender
+ * @param lienPointers List of lien, lienId pairs
+ */
+function seize(LienPointer[] calldata lienPointers) external;
 ```
 
 ## Contract Structs and Types
