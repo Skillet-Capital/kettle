@@ -34,11 +34,21 @@ const config: HardhatUserConfig = {
       chainId: 1,
       gas: 2100000,
       blockGasLimit: 0x1fffffffffffff,
+    },
+    sepolia: {
+      url: `https://eth-sepolia.g.alchemy.com/v2/${process.env.SEPOLIA_ALCHEMY_KEY}`,
+      accounts: [
+        process.env.OWNER_PK!,
+        process.env.SIGNER_PK!
+      ]
     }
   },
   gasReporter: {
     enabled: true,
     gasPrice: 20
+  },
+  etherscan: {
+    apiKey: process.env.ETHERSCAN_KEY
   }
 }
 
