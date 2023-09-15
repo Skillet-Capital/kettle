@@ -137,5 +137,36 @@ function loan(
   bytes calldata offerSignature,
   bytes calldata authSignature
 ) external returns (uint256 lienId);
+
+/**
+ * Refinance
+ * ONLY callable by borrower
+ * called by borrowers to refinance current lien with new loan offer
+ * verifies and takes loan offer
+ * if new loan amount is less than current repayment amount
+ * - transfer loan amount from new lender to old lender
+ * - transfer rest of repayment from borrower to old lender
+ * else if the the new loan amount is greater than current repayment amount
+ * - transfer full repayment from new lender to old lender
+ * - transfer rest of loan amount from new lender to borrower
+ * @param lien Existing lien
+ * @param lienId Identifier of existing lien
+ * @param loanAmount Loan amount in ETH
+ * @param offer Loan offer
+ * @param auth Offer auth
+ * @param offerSignature Lender offer signature
+ * @param authSignature Auth signer signature
+ * @param proof proof for criteria offer
+ */
+function refinance(
+    Lien calldata lien,
+    uint256 lienId,
+    uint256 loanAmount,
+    LoanOffer calldata offer,
+    OfferAuth calldata auth,
+    bytes calldata offerSignature,
+    bytes calldata authSignature,
+    bytes32[] calldata proof
+) external;
 ```
 
