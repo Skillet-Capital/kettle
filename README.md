@@ -1,6 +1,6 @@
 # Kettle
 
-### Loan Offer
+### Contract Structs and Types
 
 ```solidity
 /**
@@ -83,4 +83,37 @@ enum CollateralType {
   ERC721_WITH_CRITERIA: 2         // specified by range of token ids (i.e. collection or trait offer)
   ERC1155_WITH_CRITERIA: 3        // specified by range of token ids (i.e. collection or trait offer)
 }
+```
+
+### Contract Methods
+
+```solidity
+
+/**
+  * Borrow
+  * called by borrowers taking loan offers signed by lenders
+  * verifies and takes loan offer
+  * sends collateral to escrow
+  * transfers payment from lender to borrower net of fees
+  * starts lien and emits `LoanOfferTaken` event
+  * @param offer Loan offer
+  * @param auth Offer auth
+  * @param offerSignature Lender offer signature
+  * @param authSignature Auth signer signature
+  * @param loanAmount Loan amount in ETH
+  * @param collateralTokenId Token id to provide as collateral
+  * @param borrower address of borrower
+  * @param proof proof for criteria offer
+  * @return lienId New lien id
+  */
+function borrow(
+  LoanOffer calldata offer,
+  OfferAuth calldata auth,
+  bytes calldata offerSignature,
+  bytes calldata authSignature,
+  uint256 loanAmount,
+  uint256 collateralTokenId,
+  address borrower,
+  bytes32[] calldata proof
+) external returns (uint256 lienId);
 ```
