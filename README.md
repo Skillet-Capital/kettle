@@ -56,12 +56,21 @@ struct BorrowOffer {
  * (i.e.) fee does not reduce principal reflected in lien, only principal sent to borrower
  */
 interface Fee {
-  rate: BigNumber;
-  recipient: Address;
+  uint16 rate;                    // basis point rate of fee (50 = 0.50%)
+  address recipient;              // address of fee recipient
 }
 
+/**
+ * Offer Auth
+ * object needs to be signed by Kettle authenticator
+ * protects borrowers and lenders from unathenticated loan agreements
+ * specifies certain collateral can be taken by a certain offer by a certain taker
+ */
 interface OfferAuth {
-  
+  bytes32 offerHash               // hash of the offer being taken
+  address taker                   // address taking offer
+  uint256 expiration              // authentication expiration
+  bytes32 collateralHash          // hash of the collateral being taken by offer
 }
 
 /**
