@@ -91,9 +91,10 @@ enum CollateralType {
 
 /**
   * Borrow
-  * called by borrowers taking loan offers signed by lenders
+  * @notice can start loan on behalf of other borrower (default msg.sender)
+  * called by borrowers taking loan offer signed by lenders
   * verifies and takes loan offer
-  * sends collateral to escrow
+  * transfers collateral from msg.sender to escrow
   * transfers payment from lender to borrower net of fees
   * starts lien and emits `LoanOfferTaken` event
   * @param offer Loan offer
@@ -116,4 +117,25 @@ function borrow(
   address borrower,
   bytes32[] calldata proof
 ) external returns (uint256 lienId);
+
+/**
+ * Loan
+ * called by lenders taking borrow offer signed by borrower
+ * verifies and takes loan offer
+ * transfers collateral from borrower to escrow
+ * transfers payment from msg.sender to borrower net of fees
+ * starts lien and emits `LoanOfferTaken` event
+ * @param offer Loan offer
+ * @param auth Offer auth
+ * @param offerSignature Lender offer signature
+ * @param authSignature Auth signer signature
+ * @return lienId New lien id
+ */
+function loan(
+  BorrowOffer calldata offer,
+  OfferAuth calldata auth,
+  bytes calldata offerSignature,
+  bytes calldata authSignature
+) external returns (uint256 lienId);
 ```
+
