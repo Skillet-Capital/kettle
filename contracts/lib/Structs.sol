@@ -67,12 +67,11 @@ struct LoanInput {
 }
 
 struct LoanFullfillment {
-    uint256 loanIndex;
-    uint256 loanAmount;
-    uint256 collateralIdentifier;
-    bytes32[] proof;
+    uint256 offerIndex;
     OfferAuth auth;
     bytes authSignature;
+    uint256 collateralIdentifier;
+    bytes32[] proof;
 }
 
 /*//////////////////////////////////////////////////

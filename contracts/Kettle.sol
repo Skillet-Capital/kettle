@@ -104,14 +104,13 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
 
         for (uint256 i = 0; i < numFills; i++) {
             LoanFullfillment calldata fullfillment = fullfillments[i];
-            LoanInput calldata offer = loanOffers[fullfillment.loanIndex];
+            LoanInput calldata offer = loanOffers[fullfillment.offerIndex];
 
             lienIds[i] = borrow(
                 offer.offer,
                 fullfillment.auth,
                 offer.offerSignature,
                 fullfillment.authSignature,
-                fullfillment.loanAmount,
                 fullfillment.collateralIdentifier,
                 borrower,
                 fullfillment.proof
@@ -125,7 +124,6 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
      * @param auth Offer auth
      * @param offerSignature Lender offer signature
      * @param authSignature Auth signer signature
-     * @param loanAmount Loan amount in ETH
      * @param collateralTokenId Token id to provide as collateral
      * @param borrower address of borrower
      * @param proof proof for criteria offer
@@ -136,7 +134,6 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
         OfferAuth calldata auth,
         bytes calldata offerSignature,
         bytes calldata authSignature,
-        uint256 loanAmount,
         uint256 collateralTokenId,
         address borrower,
         bytes32[] calldata proof
@@ -157,7 +154,7 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
             auth,
             offerSignature,
             authSignature,
-            loanAmount,
+            offer.loanAmount,
             collateralTokenId,
             borrower
         );
@@ -175,7 +172,7 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
         uint256 totalFees = payFees(
             offer.currency,
             offer.lender,
-            loanAmount,
+            offer.loanAmount,
             offer.fees
         );
 
@@ -185,7 +182,7 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
                 offer.currency, 
                 offer.lender,
                 borrower, 
-                loanAmount - totalFees
+                offer.loanAmount - totalFees
             );
         }
     }

@@ -39,7 +39,6 @@ interface IKettle is IOfferController {
         OfferAuth calldata auth,
         bytes calldata offerSignature,
         bytes calldata authSignature,
-        uint256 loanAmount,
         uint256 collateralTokenId,
         address borrower,
         bytes32[] calldata proof

@@ -25,10 +25,6 @@ contract OfferController is IOfferController, Ownable, Signatures {
         _AUTH_SIGNER = authSigner;
     }
 
-    // function amountTaken(bytes32 offerHash) external view returns (uint256) {
-    //     return _amountTaken[offerHash];
-    // }
-
     /**
      * @notice Verifies and takes loan offer
      * @dev Does not transfer loan and collateral assets; does not update lien hash
@@ -68,26 +64,12 @@ contract OfferController is IOfferController, Ownable, Signatures {
         if (offer.rate > _LIQUIDATION_THRESHOLD) {
             revert RateTooHigh();
         }
-        // if (
-        //     lien.borrowAmount > offer.maxAmount ||
-        //     lien.borrowAmount < offer.minAmount
-        // ) {
-        //     revert InvalidLoanAmount();
-        // }
-        // uint256 __amountTaken = _amountTaken[hash];
-        // if (offer.totalAmount - __amountTaken < lien.borrowAmount) {
-        //     revert InsufficientOffer();
-        // }
 
         if (_amountTaken[hash]) {
             revert OfferUnavailable();
         }
 
         _amountTaken[hash] = true;
-
-        // unchecked {
-        //     _amountTaken[hash] = __amountTaken + lien.borrowAmount;
-        // }
 
         emit LoanOfferTaken(
             hash,
