@@ -159,14 +159,14 @@ function loan(
  * @param proof proof for criteria offer
  */
 function refinance(
-    Lien calldata lien,
-    uint256 lienId,
-    uint256 loanAmount,
-    LoanOffer calldata offer,
-    OfferAuth calldata auth,
-    bytes calldata offerSignature,
-    bytes calldata authSignature,
-    bytes32[] calldata proof
+  Lien calldata lien,
+  uint256 lienId,
+  uint256 loanAmount,
+  LoanOffer calldata offer,
+  OfferAuth calldata auth,
+  bytes calldata offerSignature,
+  bytes calldata authSignature,
+  bytes32[] calldata proof
 ) external;
 ```
 
