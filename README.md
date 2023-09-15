@@ -76,15 +76,11 @@ interface OfferAuth {
 /**
  * Collateral Type
  * enumerated collateral types
- * ERC721 - ERC721 specified by specific token id
- * ERC1155 - ERC1155 specified by specific token id
- * ERC721_WITH_CRITERIA - ERC721 specified by range of token ids (i.e. collection or trait offer)
- * ERC1155_WITH_CRITERIA - ERC1155 specified by range of token ids (i.e. collection or trait offer)
  */
 enum CollateralType {
-  ERC721: 0
-  ERC1155: 1
-  ERC721_WITH_CRITERIA: 2
-  ERC1155_WITH_CRITERIA: 3
+  ERC721: 0                       // specified by specific token id
+  ERC1155: 1                      // specified by specific token id
+  ERC721_WITH_CRITERIA: 2         // specified by range of token ids (i.e. collection or trait offer)
+  ERC1155_WITH_CRITERIA: 3        // specified by range of token ids (i.e. collection or trait offer)
 }
 ```
