@@ -47,19 +47,35 @@ struct BorrowOffer {
   Fee[] fees;                     // array of fees
 }
 
+/**
+ * Fee
+ * specifies the proportional amount of principal taken as fee
+ * recipient recieves fee
+ * fee is taken taken from loan amount before lien is started
+ * the amount that must be paid back for loan is based on GROSS amount before fee
+ * (i.e.) fee does not reduce principal reflected in lien, only principal sent to borrower
+ */
 interface Fee {
   rate: BigNumber;
   recipient: Address;
 }
 
-type CollateralType {
+interface OfferAuth {
+  
+}
+
+/**
+ * Collateral Type
+ * enumerated collateral types
+ * ERC721 - ERC721 specified by specific token id
+ * ERC1155 - ERC1155 specified by specific token id
+ * ERC721_WITH_CRITERIA - ERC721 specified by range of token ids (i.e. collection or trait offer)
+ * ERC1155_WITH_CRITERIA - ERC1155 specified by range of token ids (i.e. collection or trait offer)
+ */
+enum CollateralType {
   ERC721: 0
   ERC1155: 1
   ERC721_WITH_CRITERIA: 2
   ERC1155_WITH_CRITERIA: 3
-}
-
-interface OfferAuth {
-  
 }
 ```
