@@ -5,9 +5,9 @@
 ```solidity
 /**
  * Loan Offer
- * created and signed by lenders
- * specifies a partially fulfillable offer to start a lien
- * amount taken during loan must be less than `maxAmount` and greater than `minAmount`
+ * created and signed by `lenders`
+ * specifies a partially fulfillable offer to start a lien with lender payment
+ * amount taken when starting lien must be less than `maxAmount` and greater than `minAmount`
  */
 struct LoanOffer {
   address lender;                 // address of lender
@@ -26,6 +26,12 @@ struct LoanOffer {
   Fee[] fees;                     // array of fees
 }
 
+/**
+ * Borrow Offer
+ * created and signed by `borrowers`
+ * specifies a fully takeable offer to start a lien against borrower collateral
+ * amount taken when starting lien must equal `loanAmount`
+ */
 struct BorrowOffer {
   address borrower;               // address of borrower
   address collection;             // address of collection
@@ -34,11 +40,11 @@ struct BorrowOffer {
   uint256 collateralAmount;       // amount of collateral (default 1 for ERC721)
   address currency;               // address of currency
   uint256 loanAmount;             // desired loan amount by borrower
-  uint256 duration;               // designed
-  uint256 rate;
-  uint256 salt;
-  uint256 expiration;
-  Fee[] fees;
+  uint256 duration;               // lien duration
+  uint256 rate;                   // annualized lien rate
+  uint256 salt;                   // random number for unique offer hashing
+  uint256 expiration;             // borrow offer expiration
+  Fee[] fees;                     // array of fees
 }
 
 interface Fee {
