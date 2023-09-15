@@ -13,7 +13,7 @@ contract OfferController is IOfferController, Ownable, Signatures {
     uint256 private constant _LIQUIDATION_THRESHOLD = 100_000;
 
     mapping(address => mapping(uint256 => uint256)) public cancelledOrFulfilled;
-    mapping(bytes32 => uint256) private _amountTaken;
+    mapping(bytes32 => bool) private _amountTaken;
     address public _AUTH_SIGNER;
     uint256[50] private _gap;
 
@@ -25,9 +25,9 @@ contract OfferController is IOfferController, Ownable, Signatures {
         _AUTH_SIGNER = authSigner;
     }
 
-    function amountTaken(bytes32 offerHash) external view returns (uint256) {
-        return _amountTaken[offerHash];
-    }
+    // function amountTaken(bytes32 offerHash) external view returns (uint256) {
+    //     return _amountTaken[offerHash];
+    // }
 
     /**
      * @notice Verifies and takes loan offer
@@ -68,20 +68,26 @@ contract OfferController is IOfferController, Ownable, Signatures {
         if (offer.rate > _LIQUIDATION_THRESHOLD) {
             revert RateTooHigh();
         }
-        if (
-            lien.borrowAmount > offer.maxAmount ||
-            lien.borrowAmount < offer.minAmount
-        ) {
-            revert InvalidLoanAmount();
-        }
-        uint256 __amountTaken = _amountTaken[hash];
-        if (offer.totalAmount - __amountTaken < lien.borrowAmount) {
-            revert InsufficientOffer();
+        // if (
+        //     lien.borrowAmount > offer.maxAmount ||
+        //     lien.borrowAmount < offer.minAmount
+        // ) {
+        //     revert InvalidLoanAmount();
+        // }
+        // uint256 __amountTaken = _amountTaken[hash];
+        // if (offer.totalAmount - __amountTaken < lien.borrowAmount) {
+        //     revert InsufficientOffer();
+        // }
+
+        if (_amountTaken[hash]) {
+            revert OfferUnavailable();
         }
 
-        unchecked {
-            _amountTaken[hash] = __amountTaken + lien.borrowAmount;
-        }
+        _amountTaken[hash] = true;
+
+        // unchecked {
+        //     _amountTaken[hash] = __amountTaken + lien.borrowAmount;
+        // }
 
         emit LoanOfferTaken(
             hash,

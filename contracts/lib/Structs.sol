@@ -53,9 +53,7 @@ struct LoanOffer {
     uint256 collateralIdentifier;
     uint256 collateralAmount;
     address currency;
-    uint256 totalAmount;
-    uint256 minAmount;
-    uint256 maxAmount;
+    uint256 loanAmount;
     uint256 duration;
     uint256 rate;
     uint256 salt;

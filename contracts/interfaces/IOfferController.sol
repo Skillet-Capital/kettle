@@ -24,7 +24,7 @@ interface IOfferController is ISignatures {
 
     event NonceIncremented(address indexed user, uint256 newNonce);
 
-    function amountTaken(bytes32 offerHash) external view returns (uint256);
+    // function amountTaken(bytes32 offerHash) external view returns (uint256);
 
     function cancelOffer(uint256 salt) external;
 
