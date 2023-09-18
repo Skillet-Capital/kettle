@@ -63,18 +63,18 @@ struct LoanOffer {
     Fee[] fees;
 }
 
-struct LoanInput {
+struct LoanOfferInput {
     LoanOffer offer;
     bytes offerSignature;
 }
 
 struct LoanFullfillment {
-    uint256 loanIndex;
+    uint256 offerIndex;
     uint256 loanAmount;
     uint256 collateralIdentifier;
-    bytes32[] proof;
     OfferAuth auth;
     bytes authSignature;
+    bytes32[] proof;
 }
 
 /*//////////////////////////////////////////////////
@@ -123,7 +123,7 @@ struct RepayFullfillment {
 struct RefinanceFullfillment {
     Lien lien;
     uint256 lienId;
-    uint256 loanIndex;
+    uint256 offerIndex;
     uint256 loanAmount;
     bytes32[] proof;
     OfferAuth auth;

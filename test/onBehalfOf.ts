@@ -252,7 +252,7 @@ describe("Kettle", () => {
           ],
           [
             {
-              loanIndex: 0,
+              offerIndex: 0,
               loanAmount: ethers.parseEther("5"),
               collateralIdentifier: 1,
               auth: offerAuth,
@@ -260,7 +260,7 @@ describe("Kettle", () => {
               proof: []
             },
             {
-              loanIndex: 1,
+              offerIndex: 1,
               loanAmount: ethers.parseEther("5"),
               collateralIdentifier: 2,
               auth: offerAuth2,
