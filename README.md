@@ -1,5 +1,253 @@
 # Kettle
 
+## Examples
+Lender makes Loan Offer, Borrower takes through `borrow` method
+```ts
+// lender makes loan offer
+const loanOffer = {
+  lender: "0x1234...6789",
+  collection: "0xbc4...04e7",
+  collateralType: 0,
+  collateralIdentifier: 6789,
+  collateralAmount: 1,
+  totalAmount: 10000000000,
+  minAmount: 0,
+  maxAmount: 10000000000,
+  duration: 7776000,
+  rate: 2500,
+  salt: 1212453...384783743,
+  expiration: 1695051103,
+  fees: [
+    {
+      rate: 250,
+      recipient: "0xbc4...04e7"
+    }
+  ]
+}
+
+// lender signs loan offer
+const offerSignature = await lender.signTypedDate(loanOffer);
+
+// borrower requests authentication to take loan offer with collateral
+const collateral = {
+  collection: "0xbc4...04e7",
+  collateralType: 0,
+  collateralIdentifier: 6789,
+  collateralAmount: 1
+}
+
+// request authentication from sdk
+const { offerAuth, authSignature } = await kettle.getAuthentication({
+  side: Side.BORROWER,
+  taker: borrower,
+  offer: loanOffer,
+  collateral
+});
+
+// borrower start loan
+await kettle.connect(borrower).borrow(
+  loanOffer,
+  offerAuth,
+  offerSignature,
+  authSignature,
+  collateral.collateralIdentifier,
+  "0x0000...0000",
+  []
+);
+```
+
+Lender makes Loan Offer for Collection, Borrower takes through `borrow` method
+```ts
+// lender makes loan offer
+const loanOffer = {
+  lender: "0x1234...6789",
+  collection: "0xbc4...04e7",
+  collateralType: 0,
+  collateralIdentifier: "0x3463...e36a", // root of merkle tree for collection token ids
+  collateralAmount: 1,
+  totalAmount: 10000000000,
+  minAmount: 0,
+  maxAmount: 10000000000,
+  duration: 7776000,
+  rate: 2500,
+  salt: 1212453...384783743,
+  expiration: 1695051103,
+  fees: [
+    {
+      rate: 250,
+      recipient: "0xbc4...04e7"
+    }
+  ]
+}
+
+// lender signs loan offer
+const offerSignature = await lender.signTypedDate(loanOffer);
+
+// borrower requests authentication to take loan offer with collateral
+const collateral = {
+  collection: "0xbc4...04e7",
+  collateralType: 0,
+  collateralIdentifier: 6789,
+  collateralAmount: 1
+}
+
+// request authentication from sdk
+const { offerAuth, authSignature } = await kettle.getAuthentication({
+  side: Side.BORROWER,
+  taker: borrower,
+  offer: loanOffer,
+  collateral
+});
+
+// request proof
+const proof = await kettle.getCollateralProof({
+  collection: "0xbc4...04e7",
+  root: "0x3463...e36a",
+  tokenId: 6789
+});
+
+// borrower start loan
+await kettle.connect(borrower).borrow(
+  loanOffer,
+  offerAuth,
+  offerSignature,
+  authSignature,
+  10000000000,
+  collateral.collateralIdentifier,
+  "0x0000...0000",
+  proof
+);
+```
+
+Borrower makes Borrow Offer, Lender takes offer through `loan` method
+```ts
+// lender makes loan offer
+const borrowOffer = {
+  borrower: "0x1234...6789",
+  collection: "0xbc4...04e7",
+  collateralType: 0,
+  collateralIdentifier: 6789, // root of merkle tree for collection token ids
+  collateralAmount: 1,
+  loanAmount: 10000000000,
+  duration: 7776000,
+  rate: 2500,
+  salt: 1212453...384783743,
+  expiration: 1695051103,
+  fees: [
+    {
+      rate: 250,
+      recipient: "0xbc4...04e7"
+    }
+  ]
+}
+
+// borrower signs loan offer
+const offerSignature = await borrower.signTypedDate(loanOffer);
+
+// lender requests authentication to take loan offer with collateral
+const collateral = {
+  collection: "0xbc4...04e7",
+  collateralType: 0,
+  collateralIdentifier: 6789,
+  collateralAmount: 1
+}
+
+// lender request authentication from sdk
+const { offerAuth, authSignature } = await kettle.getAuthentication({
+  side: Side.LENDER,
+  taker: lender,
+  offer: borrowOffer,
+  collateral
+});
+
+// lender starts loan
+await kettle.connect(lender).loan(
+  borrowOffer,
+  offerAuth,
+  offerSignature,
+  authSignature
+);
+```
+
+Borrower refinances current lien with new loan offer through `refinance` method
+```ts
+// lender makes loan offer
+const loanOffer = {
+  lender: "0x1234...6789",
+  collection: "0xbc4...04e7",
+  collateralType: 0,
+  collateralIdentifier: 6789,
+  collateralAmount: 1,
+  totalAmount: 10000000000,
+  minAmount: 0,
+  maxAmount: 10000000000,
+  duration: 7776000,
+  rate: 2500,
+  salt: 1212453...384783743,
+  expiration: 1695051103,
+  fees: [
+    {
+      rate: 250,
+      recipient: "0xbc4...04e7"
+    }
+  ]
+}
+
+// lender signs loan offer
+const offerSignature = await lender.signTypedDate(loanOffer);
+
+// get lien structure
+const lien = await kettle.getLien(lienId);
+
+// borrower requests authentication to take loan offer with collateral
+const collateral = {
+  collection: "0xbc4...04e7",
+  collateralType: 0,
+  collateralIdentifier: 6789,
+  collateralAmount: 1
+}
+
+// borrower request authentication from sdk
+const { offerAuth, authSignature } = await kettle.getAuthentication({
+  side: Side.LENDER,
+  taker: lender,
+  offer: borrowOffer,
+  collateral
+});
+
+// borrower refinances loan
+await kettle.connect(borrower).refinance(
+  lien,
+  lienId,
+  10000000000,
+  borrowOffer,
+  loanOffer,
+  offerAuth,
+  offerSignature,
+  authSignature,
+  []
+);
+```
+
+Borrower repays current lien with `repay` method
+```ts
+// get lien from graph
+const lien = await kettle.getLien(lienId);
+
+await kettle.connect(borrower).repay(
+  lien,
+  lienId
+);
+```
+
+Lender seizes defaulted loan through `seize` method
+```ts
+// get lien from graph
+const lien = await kettle.getLien(lienId);
+
+await kettle.connect(lender).seize([{ lien, lienId }]);
+```
+
 ## Contract Methods
 ```solidity
 
