@@ -216,7 +216,7 @@ describe("Kettle", () => {
           ],
           [
             {
-              loanIndex: 0,
+              offerIndex: 0,
               loanAmount: ethers.parseEther("5"),
               collateralIdentifier: 1,
               proof: [],
@@ -224,7 +224,7 @@ describe("Kettle", () => {
               authSignature: authSignature
             },
             {
-              loanIndex: 1,
+              offerIndex: 1,
               loanAmount: ethers.parseEther("5"),
               collateralIdentifier: 2,
               proof: [],
@@ -358,7 +358,7 @@ describe("Kettle", () => {
           }],  
           [
             {
-              loanIndex: 0,
+              offerIndex: 0,
               loanAmount: ethers.parseEther("5"),
               collateralIdentifier: 1,
               proof: proof1,
@@ -366,7 +366,7 @@ describe("Kettle", () => {
               authSignature: authSignature
             },
             {
-              loanIndex: 0,
+              offerIndex: 0,
               loanAmount: ethers.parseEther("5"),
               collateralIdentifier: 2,
               proof: proof2,
@@ -526,7 +526,7 @@ describe("Kettle", () => {
           }],  
           [
             {
-              loanIndex: 0,
+              offerIndex: 0,
               loanAmount: ethers.parseEther("5"),
               collateralIdentifier: 1,
               proof: proof1,
@@ -534,7 +534,7 @@ describe("Kettle", () => {
               authSignature: authSignature
             },
             {
-              loanIndex: 0,
+              offerIndex: 0,
               loanAmount: ethers.parseEther("5"),
               collateralIdentifier: 2,
               proof: proof2,
@@ -677,7 +677,7 @@ describe("Kettle", () => {
           [{ offer: collectionLoanOffer, offerSignature: collectionLoanOfferSignature }],  
           [
             {
-              loanIndex: 0,
+              offerIndex: 0,
               loanAmount: ethers.parseEther("5"),
               collateralIdentifier: 1,
               proof: proof1,
@@ -685,7 +685,7 @@ describe("Kettle", () => {
               authSignature: authSignature
             },
             {
-              loanIndex: 0,
+              offerIndex: 0,
               loanAmount: ethers.parseEther("5"),
               collateralIdentifier: 3,
               proof: proof2,
@@ -827,7 +827,7 @@ describe("Kettle", () => {
           ],
           [
             {
-              loanIndex: 0,
+              offerIndex: 0,
               loanAmount: ethers.parseEther("5"),
               collateralIdentifier: tokenId1,
               proof: [],
@@ -835,7 +835,7 @@ describe("Kettle", () => {
               authSignature: authSignature
             },
             {
-              loanIndex: 1,
+              offerIndex: 1,
               loanAmount: ethers.parseEther("5"),
               collateralIdentifier: tokenId2,
               proof: [],
@@ -985,7 +985,7 @@ describe("Kettle", () => {
           ],
           [
             {
-              loanIndex: 0,
+              offerIndex: 0,
               loanAmount: ethers.parseEther("5"),
               collateralIdentifier: tokenId1,
               proof: proof1,
@@ -993,7 +993,7 @@ describe("Kettle", () => {
               authSignature: authSignature
             },
             {
-              loanIndex: 0,
+              offerIndex: 0,
               loanAmount: ethers.parseEther("5"),
               collateralIdentifier: tokenId2,
               proof: proof2,

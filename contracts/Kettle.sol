@@ -12,7 +12,7 @@ import { SafeTransfer } from "./SafeTransfer.sol";
 import { OfferController } from "./OfferController.sol";
 import { IKettle } from "./interfaces/IKettle.sol";
 
-import { Fee, Lien, LoanOffer, BorrowOffer, LoanInput, BorrowOfferInput, LienPointer, LoanFullfillment, BorrowFullfillment, RepayFullfillment, RefinanceFullfillment, OfferAuth } from "./lib/Structs.sol";
+import { Fee, Lien, LoanOffer, BorrowOffer, LoanOfferInput, BorrowOfferInput, LienPointer, LoanFullfillment, BorrowFullfillment, RepayFullfillment, RefinanceFullfillment, OfferAuth } from "./lib/Structs.sol";
 
 import { InvalidLien, Unauthorized, LienIsDefaulted, LienNotDefaulted, CollectionsDoNotMatch, CurrenciesDoNotMatch, NoEscrowImplementation } from "./lib/Errors.sol";
 
@@ -95,7 +95,7 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
      * @return lienIds array of lienIds
      */
     function borrowBatch(
-        LoanInput[] calldata loanOffers,
+        LoanOfferInput[] calldata loanOffers,
         LoanFullfillment[] calldata fullfillments,
         address borrower
     ) external returns (uint256[] memory lienIds) {
@@ -104,7 +104,7 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
 
         for (uint256 i = 0; i < numFills; i++) {
             LoanFullfillment calldata fullfillment = fullfillments[i];
-            LoanInput calldata offer = loanOffers[fullfillment.loanIndex];
+            LoanOfferInput calldata offer = loanOffers[fullfillment.offerIndex];
 
             lienIds[i] = borrow(
                 offer.offer,
@@ -426,12 +426,12 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
      * @param fullfillments Loan offer fullfillments
      */
     function refinanceBatch(
-        LoanInput[] calldata loanOffers,
+        LoanOfferInput[] calldata loanOffers,
         RefinanceFullfillment[] calldata fullfillments
     ) external {
         for (uint256 i = 0; i < fullfillments.length; i++) {
             RefinanceFullfillment calldata fullfillment = fullfillments[i];
-            LoanInput calldata offer = loanOffers[fullfillment.loanIndex];
+            LoanOfferInput calldata offer = loanOffers[fullfillment.offerIndex];
 
             refinance(
                 fullfillment.lien,

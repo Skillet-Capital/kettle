@@ -929,7 +929,7 @@ describe("Kettle", () => {
           [{ offer: collectionOffer, offerSignature: collectionSignature }],  
           [
             {
-              loanIndex: 0,
+              offerIndex: 0,
               loanAmount: ethers.parseEther("5"),
               collateralIdentifier: 1,
               proof: proof1,
@@ -937,7 +937,7 @@ describe("Kettle", () => {
               authSignature
             },
             {
-              loanIndex: 0,
+              offerIndex: 0,
               loanAmount: ethers.parseEther("5"),
               collateralIdentifier: 2,
               proof: proof2,
@@ -1069,7 +1069,7 @@ describe("Kettle", () => {
             {
               lien: lienPointers[0].lien,
               lienId: lienPointers[0].lienId,
-              loanIndex: 0,
+              offerIndex: 0,
               loanAmount: newLoanAmount / 2n,
               proof: generateMerkleProofForToken(tokenIds, tokenId1),
               auth: offerAuth,
@@ -1078,7 +1078,7 @@ describe("Kettle", () => {
             {
               lien: lienPointers[1].lien,
               lienId: lienPointers[1].lienId,
-              loanIndex: 0,
+              offerIndex: 0,
               loanAmount: newLoanAmount / 2n,
               proof: generateMerkleProofForToken(tokenIds, tokenId2),
               auth: offerAuth2,
@@ -1164,7 +1164,7 @@ describe("Kettle", () => {
             {
               lien: lienPointers[0].lien,
               lienId: lienPointers[0].lienId,
-              loanIndex: 0,
+              offerIndex: 0,
               loanAmount: newLoanAmount / 2n,
               proof: generateMerkleProofForToken(tokenIds, tokenId1),
               auth: offerAuth,
@@ -1173,7 +1173,7 @@ describe("Kettle", () => {
             {
               lien: lienPointers[1].lien,
               lienId: lienPointers[1].lienId,
-              loanIndex: 0,
+              offerIndex: 0,
               loanAmount: newLoanAmount / 2n,
               proof: generateMerkleProofForToken(tokenIds, tokenId2),
               auth: offerAuth2,
@@ -1280,7 +1280,7 @@ describe("Kettle", () => {
             {
               lien: lienPointers[0].lien,
               lienId: lienPointers[0].lienId,
-              loanIndex: 0,
+              offerIndex: 0,
               loanAmount: newLoanAmount / 2n,
               proof: generateMerkleProofForToken(tokenIds, tokenId1),
               auth: offerAuth,
@@ -1289,7 +1289,7 @@ describe("Kettle", () => {
             {
               lien: lienPointers[1].lien,
               lienId: lienPointers[1].lienId,
-              loanIndex: 1,
+              offerIndex: 1,
               loanAmount: newLoanAmount / 2n,
               proof: generateMerkleProofForToken(tokenIds, tokenId2),
               auth: offerAuth2,
@@ -1355,7 +1355,7 @@ describe("Kettle", () => {
             {
               lien: lienPointers[0].lien,
               lienId: lienPointers[0].lienId,
-              loanIndex: 0,
+              offerIndex: 0,
               loanAmount: newLoanAmount / 2n,
               proof: generateMerkleProofForToken(tokenIds, tokenId1),
               auth: offerAuth,
@@ -1418,7 +1418,7 @@ describe("Kettle", () => {
             {
               lien: lienPointers[0].lien,
               lienId: lienPointers[0].lienId,
-              loanIndex: 0,
+              offerIndex: 0,
               loanAmount: newLoanAmount / 2n,
               proof: generateMerkleProofForToken(tokenIds, tokenId1),
               auth: offerAuth,
@@ -1481,7 +1481,7 @@ describe("Kettle", () => {
             {
               lien: lienPointers[0].lien,
               lienId: lienPointers[0].lienId,
-              loanIndex: 0,
+              offerIndex: 0,
               loanAmount: newLoanAmount / 2n,
               proof: generateMerkleProofForToken(tokenIds, tokenId2),
               auth: offerAuth,
@@ -1545,7 +1545,7 @@ describe("Kettle", () => {
             {
               lien: lienPointers[0].lien,
               lienId: 1,
-              loanIndex: 0,
+              offerIndex: 0,
               loanAmount: newLoanAmount / 2n,
               proof: generateMerkleProofForToken(tokenIds, tokenId1),
               auth: offerAuth,
@@ -1610,7 +1610,7 @@ describe("Kettle", () => {
             {
               lien: lienPointers[0].lien,
               lienId: lienPointers[0].lienId,
-              loanIndex: 0,
+              offerIndex: 0,
               loanAmount: newLoanAmount / 2n,
               proof: generateMerkleProofForToken(tokenIds, tokenId1),
               auth: offerAuth,
@@ -2007,7 +2007,7 @@ describe("Kettle", () => {
           [{ offer: collectionOffer, offerSignature: collectionSignature }],  
           [
             {
-              loanIndex: 0,
+              offerIndex: 0,
               loanAmount: ethers.parseEther("5"),
               collateralIdentifier: 1,
               proof: proof1,
@@ -2015,7 +2015,7 @@ describe("Kettle", () => {
               authSignature
             },
             {
-              loanIndex: 0,
+              offerIndex: 0,
               loanAmount: ethers.parseEther("5"),
               collateralIdentifier: 2,
               proof: proof2,
@@ -2154,7 +2154,7 @@ describe("Kettle", () => {
             {
               lien: lienPointers[0].lien,
               lienId: lienPointers[0].lienId,
-              loanIndex: 0,
+              offerIndex: 0,
               loanAmount: newLoanAmount / 2n,
               proof: generateMerkleProofForToken(tokenIds, tokenId1),
               auth: offerAuth,
@@ -2163,7 +2163,7 @@ describe("Kettle", () => {
             {
               lien: lienPointers[1].lien,
               lienId: lienPointers[1].lienId,
-              loanIndex: 0,
+              offerIndex: 0,
               loanAmount: newLoanAmount / 2n,
               proof: generateMerkleProofForToken(tokenIds, tokenId2),
               auth: offerAuth2,
