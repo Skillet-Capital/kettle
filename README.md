@@ -15,7 +15,7 @@
   * @param auth Offer auth
   * @param offerSignature Lender offer signature
   * @param authSignature Auth signer signature
-  * @param loanAmount Loan amount in ETH
+  * @param loanAmount Loan amount in currency denomination
   * @param collateralTokenId Token id to provide as collateral
   * @param borrower address of borrower
   * @param proof proof for criteria offer
@@ -65,7 +65,7 @@ function loan(
  * - transfer rest of loan amount from new lender to borrower
  * @param lien Existing lien
  * @param lienId Identifier of existing lien
- * @param loanAmount Loan amount in ETH
+ * @param loanAmount Loan amount in currency denomination
  * @param offer Loan offer
  * @param auth Offer auth
  * @param offerSignature Lender offer signature
