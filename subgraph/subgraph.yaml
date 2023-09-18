@@ -1,0 +1,41 @@
+specVersion: 0.0.5
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: Kettle
+    network: sepolia
+    source:
+      address: "0xa3fD688EfADA92eC4e401fC897a5CF2A6b9C02fE"
+      abi: Kettle
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - LoanOfferTaken
+        - NonceIncremented
+        - OfferCancelled
+        - OwnershipTransferred
+        - Refinance
+        - Repay
+        - Seize
+      abis:
+        - name: Kettle
+          file: ./abis/Kettle.json
+      eventHandlers:
+        - event: LoanOfferTaken(bytes32,uint256,address,address,address,uint8,address,uint256,uint256,uint256,uint256,uint256,uint256)
+          handler: handleLoanOfferTaken
+        - event: NonceIncremented(indexed address,uint256)
+          handler: handleNonceIncremented
+        - event: OfferCancelled(indexed address,uint256)
+          handler: handleOfferCancelled
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+        - event: Refinance(uint256,address,address,uint256,address,address,uint256,uint256,uint256,uint256)
+          handler: handleRefinance
+        - event: Repay(uint256,address,uint256)
+          handler: handleRepay
+        - event: Seize(uint256,address)
+          handler: handleSeize
+      file: ./src/kettle.ts
