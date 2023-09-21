@@ -9,79 +9,83 @@ import {
   Repay,
   Seize
 } from "../generated/Kettle/Kettle"
-import { ExampleEntity } from "../generated/schema"
+import { Lien, Nonce, Cancel } from "../generated/schema"
 
 export function handleLoanOfferTaken(event: LoanOfferTaken): void {
-  // Entities can be loaded from the store using a string ID; this ID
-  // needs to be unique across all entities of the same type
-  let entity = ExampleEntity.load(event.transaction.from)
+  let id = ["lien", event.params.lienId.toString()].join("/");
+  let lien = Lien.load(id);
 
-  // Entities only exist after they have been saved to the store;
-  // `null` checks allow to create entities on demand
-  if (!entity) {
-    entity = new ExampleEntity(event.transaction.from)
+  // if lien does not exists, create new lien
+  if (!lien) lien = new Lien(id);
 
-    // Entity fields can be set using simple assignments
-    entity.count = BigInt.fromI32(0)
-  }
-
-  // BigInt and BigDecimal math are supported
-  entity.count = entity.count + BigInt.fromI32(1)
-
-  // Entity fields can be set based on event parameters
-  entity.offerHash = event.params.offerHash
-  entity.lienId = event.params.lienId
-
-  // Entities can be written to the store with `.save()`
-  entity.save()
-
-  // Note: If a handler doesn't require existing field values, it is faster
-  // _not_ to load the entity from the store. Instead, create it fresh with
-  // `new Entity(...)`, set the fields that should be updated and save the
-  // entity back to the store. Fields that were not set or unset remain
-  // unchanged, allowing for partial updates to be applied.
-
-  // It is also possible to access smart contracts from mappings. For
-  // example, the contract that has emitted the event can be connected to
-  // with:
-  //
-  // let contract = Contract.bind(event.address)
-  //
-  // The following functions can then be called on this contract to access
-  // state variables and other data:
-  //
-  // - contract._AUTH_SIGNER(...)
-  // - contract.amountTaken(...)
-  // - contract.blockRange(...)
-  // - contract.borrow(...)
-  // - contract.borrowBatch(...)
-  // - contract.cancelledOrFulfilled(...)
-  // - contract.escrows(...)
-  // - contract.getBorrowOfferHash(...)
-  // - contract.getEscrow(...)
-  // - contract.getLoanOfferHash(...)
-  // - contract.getRepaymentAmount(...)
-  // - contract.information(...)
-  // - contract.liens(...)
-  // - contract.loan(...)
-  // - contract.loanBatch(...)
-  // - contract.nonces(...)
-  // - contract.onERC1155BatchReceived(...)
-  // - contract.onERC1155Received(...)
-  // - contract.onERC721Received(...)
-  // - contract.oracles(...)
-  // - contract.owner(...)
-  // - contract.supportsInterface(...)
+  // populate lien fields
+  lien.lienId = event.params.lienId;
+  lien.offerHash = event.params.offerHash;
+  lien.lender = event.params.lender;
+  lien.borrower = event.params.borrower;
+  lien.collateralType = BigInt.fromU64(event.params.collateralType);
+  lien.collateralAddress = event.params.collection;
+  lien.collateralId = event.params.tokenId;
+  lien.collateralAmount = event.params.amount;
+  lien.currency = event.params.currency;
+  lien.loanAmount = event.params.borrowAmount;
+  lien.rate = event.params.rate;
+  lien.duration = event.params.duration;
+  lien.startTime = event.params.startTime;
+  lien.endTime = event.params.startTime.plus(event.params.duration);
+  lien.isActive = true;
+  lien.isRepaid = false;
+  lien.isDefaulted = false;
+  
+  lien.save();
+  return;
 }
 
-export function handleNonceIncremented(event: NonceIncremented): void {}
+export function handleRefinance(event: Refinance): void {
+  return;
+}
 
-export function handleOfferCancelled(event: OfferCancelled): void {}
+export function handleRepay(event: Repay): void {
+  let id = ["lien", event.params.lienId.toString()].join("/");
+  let lien = Lien.load(id) as Lien;
 
-export function handleOwnershipTransferred(event: OwnershipTransferred): void {}
+  lien.isActive = false;
+  lien.isRepaid = true;
+  
+  lien.save();
+  return;
+}
 
-export function handleRefinance(event: Refinance): void {}
+export function handleSeize(event: Seize): void {
+  let id = ["lien", event.params.lienId.toString()].join("/");
+  let lien = Lien.load(id) as Lien;
 
-export function handleRepay(event: Repay): void {}
+  lien.isActive = false;
+  lien.isDefaulted = true;
+  
+  lien.save();
+  return;
+}
 
-export function handleSeize(event: Seize): void {}
+export function handleNonceIncremented(event: NonceIncremented): void {
+  let userNonceId = ["nonce", event.params.user.toHexString()].join("/");
+  let nonce = Nonce.load(userNonceId);
+  if (!nonce) {
+    nonce = new Nonce(userNonceId);
+    nonce.user = event.params.user;
+    nonce.nonce = event.params.newNonce;
+  } else {
+    nonce.nonce = event.params.newNonce;
+  }
+
+  nonce.save();
+  return;
+}
+
+export function handleOfferCancelled(event: OfferCancelled): void {
+  let cancelId = ["cancel", event.params.user.toHexString(), event.params.salt.toString()].join("/");
+  const cancel = new Cancel(cancelId);
+  cancel.user = event.params.user;
+  cancel.salt = event.params.salt;
+  cancel.save();
+}

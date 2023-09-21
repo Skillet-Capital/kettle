@@ -1,6 +1,40 @@
-type ExampleEntity @entity {
-  id: Bytes!
-  count: BigInt!
-  offerHash: Bytes! # bytes32
-  lienId: BigInt! # uint256
+type Count @entity {
+  id: ID!
+  open: BigInt!
+  repaid: BigInt!
+  defaulted: BigInt!
+  total: BigInt!
+}
+
+type Nonce @entity {
+  id: ID!
+  user: Bytes!
+  nonce: BigInt!
+}
+
+type Cancel @entity {
+  id: ID!
+  user: Bytes!
+  salt: BigInt!
+}
+
+type Lien @entity {
+  id: ID!
+  lienId: BigInt!
+  offerHash: Bytes!
+  lender: Bytes!
+  borrower: Bytes!
+  collateralType: BigInt!
+  collateralAddress: Bytes!
+  collateralId: BigInt!
+  collateralAmount: BigInt!
+  currency: Bytes!
+  loanAmount: BigInt!
+  rate: BigInt!
+  duration: BigInt!
+  startTime: BigInt!
+  endTime: BigInt!
+  isActive: Boolean!
+  isRepaid: Boolean!
+  isDefaulted: Boolean!
 }

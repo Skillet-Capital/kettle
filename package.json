@@ -6,7 +6,15 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "solhint": "./node_modules/.bin/solhint -f table contracts/**/*.sol",
-    "prettier:solidity": "./node_modules/.bin/prettier --write contracts/**/*.sol"
+    "prettier:solidity": "./node_modules/.bin/prettier --write contracts/**/*.sol",
+    "graph-test": "graph test",
+    "graph-codegen": "cd ./subgraph && graph codegen",
+    "graph-build": "cd ./subgraph && graph build",
+    "graph-local": "docker-compose up",
+    "graph-local-clean": "docker-compose down -v && docker-compose rm -v && rm -rf data/ipfs data/postgres",
+    "create-local": "graph create --node http://127.0.0.1:8020 kettle-eth",
+    "deploy-local": "cd ./subgraph && graph deploy --ipfs http://127.0.0.1:5001 --node http://127.0.0.1:8020 kettle-eth",
+    "hardhat-local": "hardhat node --hostname 0.0.0.0"
   },
   "author": "",
   "license": "ISC",
@@ -35,9 +43,11 @@
     "typescript": "^5.1.6"
   },
   "dependencies": {
+    "@graphprotocol/hardhat-graph": "^0.1.0-alpha.2",
     "@nomiclabs/hardhat-etherscan": "^3.1.7",
     "@openzeppelin/contracts": "^4.9.3",
     "dotenv": "^16.3.1",
+    "hardhat-graph": "^0.1.0-alpha.4",
     "hardhat-tracer": "^2.5.1",
     "merkletreejs": "^0.3.10",
     "solmate": "^6.1.0",
