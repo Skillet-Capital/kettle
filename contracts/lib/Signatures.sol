@@ -17,9 +17,6 @@ abstract contract Signatures is ISignatures {
     string private constant _VERSION = "1";
 
     mapping(address => uint256) public nonces;
-    mapping(address => uint256) public oracles;
-    uint256 public blockRange;
-
     uint256[50] private _gap;
 
     constructor() {
@@ -286,7 +283,7 @@ abstract contract Signatures is ISignatures {
      * @notice Verify authorization of offer
      * @param offerHash Hash of offer struct
      * @param signer signer address
-     * @param signature Packed offer signature (with oracle signature if necessary)
+     * @param signature Packed offer signature
      */
     function _verifyOfferAuthorization(
         bytes32 offerHash,
