@@ -174,12 +174,6 @@ contract OfferController is IOfferController, Ownable, Signatures {
             lien.amount
         );
 
-        // console.log(lien.collateralType);
-        // console.log(lien.collection);
-        // console.log(lien.tokenId);
-        // console.log(lien.amount);
-        // console.logBytes32(collateralHash);
-
         bytes32 authHash = _hashOfferAuth(auth);
         _verifyOfferAuthorization(authHash, _AUTH_SIGNER, signature);
 
