@@ -262,6 +262,71 @@ describe("Kettle", () => {
         expect(await testErc20.balanceOf(borrower)).to.equal(netLoanAmount);
         expect(await testErc20.balanceOf(feeRecipient)).to.equal(loanAmount - netLoanAmount)
       });
+
+      it('should revert if fees are too high', async () => {
+        const tokenOffer2 = await getLoanOffer({
+          collateralType: CollateralType.ERC721,
+          collateralIdentifier: tokenId2,
+          lender: lender,
+          collection: testErc721,
+          currency: testErc20,
+          totalAmount: loanAmount,
+          minAmount: 0,
+          maxAmount: loanAmount,
+          duration: DAY_SECONDS * 7,
+          rate: 1000,
+          expiration: blockTimestamp + DAY_SECONDS * 7,
+          fees: [
+            {
+            rate: 9999,
+            recipient: await feeRecipient.getAddress()
+          },
+          {
+            rate: 1,
+            recipient: await feeRecipient.getAddress()
+          }
+        ]
+        });
+
+        const offerSignature2 = await signLoanOffer(
+          kettle,
+          lender,
+          tokenOffer2
+        );
+
+        const offerHash2 = await kettle.getLoanOfferHash(tokenOffer2);
+
+        const collateralHash2 = await hashCollateral(
+          CollateralType.ERC721,
+          testErc721,
+          tokenId2,
+          1
+        );
+
+        const offerAuth2 = {
+          offerHash: offerHash2,
+          taker: await borrower.getAddress(),
+          expiration: await time.latest() + 100,
+          collateralHash: collateralHash2
+        }
+
+        const authSignature2 = await signOfferAuth(
+          kettle,
+          authSigner,
+          offerAuth2
+        );
+
+        await expect(kettle.connect(borrower).borrow(
+          tokenOffer2,
+          offerAuth2,
+          offerSignature2, 
+          authSignature2,
+          loanAmount, 
+          tokenId2,
+          ADDRESS_ZERO,
+          [],
+        )).to.be.revertedWithCustomError(kettle, "TotalFeeTooHigh")
+      });
     });
   });
 });
