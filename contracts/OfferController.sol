@@ -3,6 +3,8 @@ pragma solidity 0.8.19;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
+import { Helpers } from "./Helpers.sol";
+
 import { IOfferController } from "./interfaces/IOfferController.sol";
 import { Lien, LoanOffer, BorrowOffer, OfferAuth, Collateral } from "./lib/Structs.sol";
 import { Signatures } from "./lib/Signatures.sol";
@@ -83,6 +85,11 @@ contract OfferController is IOfferController, Ownable, Signatures {
             _amountTaken[hash] = __amountTaken + lien.borrowAmount;
         }
 
+        uint256 netBorrowAmount = Helpers.computeAmountAfterFees(
+            lien.borrowAmount,
+            offer.fees
+        );
+
         emit LoanOfferTaken(
             hash,
             lienId,
@@ -94,6 +101,7 @@ contract OfferController is IOfferController, Ownable, Signatures {
             lien.tokenId,
             lien.amount,
             lien.borrowAmount,
+            netBorrowAmount,
             lien.rate,
             lien.duration,
             block.timestamp
@@ -142,6 +150,11 @@ contract OfferController is IOfferController, Ownable, Signatures {
 
         cancelledOrFulfilled[offer.borrower][offer.salt] = 1;
 
+        uint256 netBorrowAmount = Helpers.computeAmountAfterFees(
+            lien.borrowAmount,
+            offer.fees
+        );
+
         emit LoanOfferTaken(
             hash,
             lienId,
@@ -153,6 +166,7 @@ contract OfferController is IOfferController, Ownable, Signatures {
             lien.tokenId,
             lien.amount,
             lien.borrowAmount,
+            netBorrowAmount,
             lien.rate,
             lien.duration,
             block.timestamp
