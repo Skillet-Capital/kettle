@@ -21,6 +21,7 @@ error CurrenciesDoNotMatch();
 error InsufficientRefinance();
 error InvalidAuctionDuration();
 error NoEscrowImplementation();
+error TotalFeeTooHigh();
 
 // CollateralVerifier
 error InvalidCollateral();

@@ -14,7 +14,7 @@ import { IKettle } from "./interfaces/IKettle.sol";
 
 import { CollateralType, Fee, Lien, LoanOffer, BorrowOffer, LoanOfferInput, BorrowOfferInput, LienPointer, LoanFullfillment, BorrowFullfillment, RepayFullfillment, RefinanceFullfillment, OfferAuth } from "./lib/Structs.sol";
 
-import { InvalidLien, Unauthorized, LienIsDefaulted, LienNotDefaulted, CollectionsDoNotMatch, CurrenciesDoNotMatch, NoEscrowImplementation, InvalidCollateralAmount, InvalidCollateralType } from "./lib/Errors.sol";
+import { InvalidLien, Unauthorized, LienIsDefaulted, LienNotDefaulted, CollectionsDoNotMatch, CurrenciesDoNotMatch, NoEscrowImplementation, InvalidCollateralAmount, InvalidCollateralType, TotalFeeTooHigh } from "./lib/Errors.sol";
 
 contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder, ERC1155Holder {
     uint256 private constant _BASIS_POINTS = 10_000;
@@ -80,6 +80,11 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
             unchecked {
                 totalFees += feeAmount;
             }
+        }
+
+        // revert if total fees are more than loan amount (over 100% fees)
+        if (totalFees >= loanAmount) {
+            revert TotalFeeTooHigh();
         }
     }
 
