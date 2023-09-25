@@ -357,7 +357,7 @@ describe("Kettle", () => {
         offerHash = await kettle.getLoanOfferHash(collectionOffer);
 
         collateralHash = await hashCollateral(
-          CollateralType.ERC721_WITH_CRITERIA,
+          CollateralType.ERC721,
           testErc721,
           tokenId1,
           1
@@ -377,7 +377,7 @@ describe("Kettle", () => {
         );
 
         const collateralHash2 = await hashCollateral(
-          CollateralType.ERC721_WITH_CRITERIA,
+          CollateralType.ERC721,
           testErc721,
           tokenId2,
           1
@@ -726,7 +726,7 @@ describe("Kettle", () => {
         offerHash = await kettle.getLoanOfferHash(collectionOffer);
 
         collateralHash = await hashCollateral(
-          CollateralType.ERC1155_WITH_CRITERIA,
+          CollateralType.ERC1155,
           testErc1155,
           tokenId1,
           token1Amount
@@ -746,7 +746,7 @@ describe("Kettle", () => {
         );
 
         const collateralHash2 = await hashCollateral(
-          CollateralType.ERC1155_WITH_CRITERIA,
+          CollateralType.ERC1155,
           testErc1155,
           tokenId2,
           token2Amount
