@@ -3,9 +3,28 @@ pragma solidity 0.8.19;
 
 import { CollateralType } from "./lib/Structs.sol";
 
-import { InvalidCollateral, InvalidCollateralCriteria } from "./lib/Errors.sol";
+import { InvalidCollateralType, InvalidCollateral, InvalidCollateralCriteria } from "./lib/Errors.sol";
 
 library CollateralVerifier {
+
+    function mapCollateralType(
+        uint8 collateralType
+    ) external pure returns (uint8) {
+        if (
+            collateralType == uint8(CollateralType.ERC721) ||
+            collateralType == uint8(CollateralType.ERC721_WITH_CRITERIA)
+        ) {
+            return uint8(CollateralType.ERC721);
+        } else if (
+            collateralType == uint8(CollateralType.ERC1155) ||
+            collateralType == uint8(CollateralType.ERC1155_WITH_CRITERIA)
+        ) {
+            return uint8(CollateralType.ERC1155);
+        } else {
+            revert InvalidCollateralType();
+        }
+    }
+
     function verifyCollateral(
         uint8 collateralType,
         uint256 collateralRoot,
