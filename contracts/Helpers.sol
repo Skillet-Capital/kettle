@@ -41,6 +41,6 @@ library Helpers {
         uint256 amount,
         uint16 rate
     ) public pure returns (uint256) {
-        return (amount * rate + _BASIS_POINTS - 1) / _BASIS_POINTS;
+        return ((amount * rate) + _BASIS_POINTS - 1) / _BASIS_POINTS;
     }
 }
