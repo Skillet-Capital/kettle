@@ -9,6 +9,7 @@ import { Signer } from "ethers";
 
 import { getFixture } from './setup';
 import { 
+  formatLien,
   getLoanOffer,
   signLoanOffer,
   hashCollateral,
@@ -157,7 +158,7 @@ describe("Kettle", () => {
       });
 
       it('should start loan with fees', async () => {
-        await kettle.connect(borrower).borrow(
+        const txn = await kettle.connect(borrower).borrow(
           tokenOffer,
           offerAuth,
           offerSignature, 
@@ -168,9 +169,21 @@ describe("Kettle", () => {
           [],
         );
 
+        const lienLog = await txn.wait().then(
+          async (receipt) => {
+            const kettleAddres = await kettle.getAddress();
+            const lienLog = receipt!.logs!.find(
+              (log) => (log.address === kettleAddres)
+            )!;
+  
+            return  kettle.interface.decodeEventLog("LoanOfferTaken", lienLog!.data, lienLog!.topics);
+          });
+        
         expect(await testErc721.ownerOf(tokenId1)).to.equal(await erc721Escrow.getAddress());
 
         const netLoanAmount = loanAmount * BigInt(9_750) / BigInt(10_000);
+        expect(netLoanAmount).to.equal(lienLog.netBorrowAmount)
+
         expect(await testErc20.balanceOf(borrower)).to.equal(netLoanAmount);
         expect(await testErc20.balanceOf(feeRecipient)).to.equal(loanAmount - netLoanAmount)
       });

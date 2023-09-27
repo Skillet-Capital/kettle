@@ -30,11 +30,12 @@ library Helpers {
     function computeAmountAfterFees(
         uint256 amount,
         Fee[] memory fees
-    ) public pure returns (uint256) {
+    ) public pure returns (uint256 netAmount) {
+        netAmount = amount;
         for (uint256 i = 0; i < fees.length; i++) {
-            amount = amount - computeFeeAmount(amount, fees[i].rate);
+            netAmount = netAmount - computeFeeAmount(amount, fees[i].rate);
         }
-        return amount;
+        return netAmount;
     }
 
     function computeFeeAmount(

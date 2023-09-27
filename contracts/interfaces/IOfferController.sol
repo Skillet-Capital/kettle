@@ -15,6 +15,7 @@ interface IOfferController is ISignatures {
         uint256 tokenId,
         uint256 amount,
         uint256 borrowAmount,
+        uint256 netBorrowAmount,
         uint256 rate,
         uint256 duration,
         uint256 startTime
