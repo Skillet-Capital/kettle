@@ -12,9 +12,9 @@ import { SafeTransfer } from "./SafeTransfer.sol";
 import { OfferController } from "./OfferController.sol";
 import { IKettle } from "./interfaces/IKettle.sol";
 
-import { Fee, Lien, LoanOffer, BorrowOffer, LoanOfferInput, BorrowOfferInput, LienPointer, LoanFullfillment, BorrowFullfillment, RepayFullfillment, RefinanceFullfillment, OfferAuth } from "./lib/Structs.sol";
+import { CollateralType, Fee, Lien, LoanOffer, BorrowOffer, LoanOfferInput, BorrowOfferInput, LienPointer, LoanFullfillment, BorrowFullfillment, RepayFullfillment, RefinanceFullfillment, OfferAuth } from "./lib/Structs.sol";
 
-import { InvalidLien, Unauthorized, LienIsDefaulted, LienNotDefaulted, CollectionsDoNotMatch, CurrenciesDoNotMatch, NoEscrowImplementation } from "./lib/Errors.sol";
+import { InvalidLien, Unauthorized, LienIsDefaulted, LienNotDefaulted, CollectionsDoNotMatch, CurrenciesDoNotMatch, NoEscrowImplementation, InvalidCollateralAmount, InvalidCollateralType, TotalFeeTooHigh } from "./lib/Errors.sol";
 
 contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder, ERC1155Holder {
     uint256 private constant _BASIS_POINTS = 10_000;
@@ -80,6 +80,11 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
             unchecked {
                 totalFees += feeAmount;
             }
+        }
+
+        // revert if total fees are more than loan amount (over 100% fees)
+        if (totalFees >= loanAmount) {
+            revert TotalFeeTooHigh();
         }
     }
 
@@ -213,7 +218,7 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
         Lien memory lien = Lien({
             lender: offer.lender,
             borrower: borrower,
-            collateralType: uint8(offer.collateralType),
+            collateralType: CollateralVerifier.mapCollateralType(offer.collateralType),
             collection: offer.collection,
             amount: offer.collateralAmount,
             tokenId: collateralTokenId,
@@ -329,7 +334,7 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
         Lien memory lien = Lien({
             lender: msg.sender,
             borrower: offer.borrower,
-            collateralType: offer.collateralType,
+            collateralType: CollateralVerifier.mapCollateralType(offer.collateralType),
             collection: offer.collection,
             amount: offer.collateralAmount,
             tokenId: offer.collateralIdentifier,
@@ -471,7 +476,12 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
             revert Unauthorized();
         }
 
-        /* Verify collateral is takeable by loan offer */
+        /** 
+         * Verify collateral is takeable by loan offer 
+         * use token id from lien against collateral identifier of offer
+         * make sure the offer is specifying collateral that matches
+         * the current lien
+         */
         CollateralVerifier.verifyCollateral(
             offer.collateralType,
             offer.collateralIdentifier,
@@ -531,11 +541,19 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
             revert CurrenciesDoNotMatch();
         }
 
+        if (lien.amount != offer.collateralAmount) {
+            revert InvalidCollateralAmount();
+        }
+
+        if (lien.collateralType != CollateralVerifier.mapCollateralType(offer.collateralType)) {
+            revert InvalidCollateralType();
+        }
+
         /* Update lien with new loan details. */
         Lien memory newLien = Lien({
             lender: offer.lender,
             borrower: lien.borrower,
-            collateralType: offer.collateralType,
+            collateralType: lien.collateralType,
             collection: lien.collection,
             amount: lien.amount,
             tokenId: lien.tokenId,
