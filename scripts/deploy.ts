@@ -22,6 +22,7 @@ async function main() {
   await kettle.waitForDeployment();
 
   console.log("Kettle:".padEnd(15), await kettle.getAddress());
+  return;
 }
 
 // We recommend this pattern to be able to use async/await everywhere
