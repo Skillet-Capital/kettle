@@ -60,6 +60,6 @@ contract SafeTransfer {
     address to,
     uint256 amount
   ) internal {
-    IERC20(token).transferFrom(from, to, amount);
+    IERC20(token).safeTransferFrom(from, to, amount);
   }
 }
