@@ -41,6 +41,13 @@ const config: HardhatUserConfig = {
         process.env.OWNER_PK!,
         process.env.SIGNER_PK!
       ]
+    },
+    mainnet: {
+      url: `https://eth-mainnet.g.alchemy.com/v2/${process.env.MAINNET_ALCHEMY_KEY}`,
+      accounts: [
+        process.env.OWNER_PK!,
+        process.env.SIGNER_PK!
+      ]
     }
   },
   gasReporter: {
