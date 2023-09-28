@@ -16,6 +16,19 @@ import { CollateralType, Fee, Lien, LoanOffer, BorrowOffer, LoanOfferInput, Borr
 
 import { InvalidLien, Unauthorized, LienIsDefaulted, LienNotDefaulted, CollectionsDoNotMatch, CurrenciesDoNotMatch, NoEscrowImplementation, InvalidCollateralAmount, InvalidCollateralType, TotalFeeTooHigh } from "./lib/Errors.sol";
 
+/**
+*  _        _   _   _      
+* | |      | | | | | |     
+* | | _____| |_| |_| | ___ 
+* | |/ / _ \ __| __| |/ _ \
+* |   <  __/ |_| |_| |  __/
+* |_|\_\___|\__|\__|_|\___|
+*
+* @title Kettle
+* @author diamondjim
+* @custom:version 1.0
+*/
+
 contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder, ERC1155Holder {
     uint256 private constant _BASIS_POINTS = 10_000;
     uint256 private constant _LIQUIDATION_THRESHOLD = 100_000;
