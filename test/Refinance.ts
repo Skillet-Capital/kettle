@@ -340,7 +340,7 @@ describe("Kettle", () => {
         offerHash = await kettle.getLoanOfferHash(refinanceOffer);
 
         collateralHash = await hashCollateral(
-          CollateralType.ERC721_WITH_CRITERIA,
+          CollateralType.ERC721,
           testErc721,
           tokenId1,
           1
@@ -703,6 +703,115 @@ describe("Kettle", () => {
           []
         )).to.be.revertedWithCustomError(kettle, "CollectionsDoNotMatch");
       });
+
+      it('should reject if lien is currencies do not match', async () => {
+        const newLoanAmount = loanAmount;
+
+        const refinanceOffer = await getLoanOffer({
+          collateralType: CollateralType.ERC721,
+          collateralIdentifier: tokenId1,
+          lender: lender,
+          collection: testErc721,
+          currency: ethers.Wallet.createRandom(),
+          totalAmount: newLoanAmount,
+          minAmount: 0,
+          maxAmount: newLoanAmount,
+          duration: DAY_SECONDS * 7,
+          rate: 1000,
+          expiration: blockTimestamp + DAY_SECONDS * 7,
+        });
+
+        const refinanceSignature = await signLoanOffer(kettle, lender, refinanceOffer);
+
+        offerHash = await kettle.getLoanOfferHash(refinanceOffer);
+
+        collateralHash = await hashCollateral(
+          CollateralType.ERC721,
+          testErc721,
+          tokenId1,
+          1
+        );
+
+        offerAuth = {
+          offerHash,
+          taker: await borrower.getAddress(),
+          expiration: await time.latest() + 100,
+          collateralHash
+        }
+
+        authSignature = await signOfferAuth(
+          kettle,
+          authSigner,
+          offerAuth
+        );
+
+        await testErc20.mint(lender, newLoanAmount);
+        await expect(kettle.connect(borrower).refinance(
+          lien,
+          lienId,
+          newLoanAmount,
+          refinanceOffer,
+          offerAuth,
+          refinanceSignature,
+          authSignature,
+          []
+        )).to.be.revertedWithCustomError(kettle, "CurrenciesDoNotMatch");
+      });
+
+      it('should reject if lien is collateral amounts do not match', async () => {
+        const newLoanAmount = loanAmount;
+
+        const refinanceOffer = await getLoanOffer({
+          collateralType: CollateralType.ERC721,
+          collateralIdentifier: tokenId1,
+          collateralAmount: 2,
+          lender: lender,
+          collection: testErc721,
+          currency: testErc20,
+          totalAmount: newLoanAmount,
+          minAmount: 0,
+          maxAmount: newLoanAmount,
+          duration: DAY_SECONDS * 7,
+          rate: 1000,
+          expiration: blockTimestamp + DAY_SECONDS * 7,
+        });
+
+        const refinanceSignature = await signLoanOffer(kettle, lender, refinanceOffer);
+
+        offerHash = await kettle.getLoanOfferHash(refinanceOffer);
+
+        collateralHash = await hashCollateral(
+          CollateralType.ERC721,
+          testErc721,
+          tokenId1,
+          1
+        );
+
+        offerAuth = {
+          offerHash,
+          taker: await borrower.getAddress(),
+          expiration: await time.latest() + 100,
+          collateralHash
+        }
+
+        authSignature = await signOfferAuth(
+          kettle,
+          authSigner,
+          offerAuth
+        );
+
+        await testErc20.mint(lender, newLoanAmount);
+        await expect(kettle.connect(borrower).refinance(
+          lien,
+          lienId,
+          newLoanAmount,
+          refinanceOffer,
+          offerAuth,
+          refinanceSignature,
+          authSignature,
+          []
+        )).to.be.revertedWithCustomError(kettle, "InvalidCollateralAmount");
+      });
     });
 
     describe("Single ERC721 (Without Custom Escrow)", () => {
@@ -883,7 +992,7 @@ describe("Kettle", () => {
         offerHash = await kettle.getLoanOfferHash(collectionOffer);
 
         collateralHash = await hashCollateral(
-          CollateralType.ERC721_WITH_CRITERIA,
+          CollateralType.ERC721,
           testErc721,
           tokenId1,
           1
@@ -903,7 +1012,7 @@ describe("Kettle", () => {
         );
 
         const collateralHash2 = await hashCollateral(
-          CollateralType.ERC721_WITH_CRITERIA,
+          CollateralType.ERC721,
           testErc721,
           tokenId2,
           1
@@ -1019,7 +1128,7 @@ describe("Kettle", () => {
         offerHash = await kettle.getLoanOfferHash(refinanceOffer);
 
         collateralHash = await hashCollateral(
-          CollateralType.ERC721_WITH_CRITERIA,
+          CollateralType.ERC721,
           testErc721,
           tokenId1,
           1
@@ -1039,7 +1148,7 @@ describe("Kettle", () => {
         );
 
         const collateralHash2 = await hashCollateral(
-          CollateralType.ERC721_WITH_CRITERIA,
+          CollateralType.ERC721,
           testErc721,
           tokenId2,
           1
@@ -1116,7 +1225,7 @@ describe("Kettle", () => {
         offerHash = await kettle.getLoanOfferHash(refinanceOffer);
 
         collateralHash = await hashCollateral(
-          CollateralType.ERC721_WITH_CRITERIA,
+          CollateralType.ERC721,
           testErc721,
           tokenId1,
           1
@@ -1136,7 +1245,7 @@ describe("Kettle", () => {
         );
 
         const collateralHash2 = await hashCollateral(
-          CollateralType.ERC721_WITH_CRITERIA,
+          CollateralType.ERC721,
           testErc721,
           tokenId2,
           1
@@ -1775,6 +1884,67 @@ describe("Kettle", () => {
         expect(await testErc20.balanceOf(lender)).to.equal(repaymentAmount);
         expect(await testErc20.balanceOf(borrower)).to.equal(newLoanAmount);
       });
+
+      it("should reject if offer amount is different than lien amount", async () => {
+        expect(await testErc20.balanceOf(lender)).to.equal(0);
+        expect(await testErc20.balanceOf(borrower)).to.equal(repaymentAmount);
+
+        const newLoanAmount = loanAmount / 2n;
+
+        const refinanceOffer = await getLoanOffer({
+          collateralType: CollateralType.ERC1155,
+          collateralIdentifier: tokenId1,
+          collateralAmount: token1Amount + 1,
+          lender: lender,
+          collection: testErc1155,
+          currency: testErc20,
+          totalAmount: newLoanAmount,
+          minAmount: 0,
+          maxAmount: newLoanAmount,
+          duration: DAY_SECONDS * 7,
+          rate: 1000,
+          expiration: blockTimestamp + DAY_SECONDS * 7,
+        });
+
+        const refinanceSignature = await signLoanOffer(kettle, lender, refinanceOffer);
+
+        offerHash = await kettle.getLoanOfferHash(refinanceOffer);
+
+        collateralHash = await hashCollateral(
+          CollateralType.ERC1155,
+          testErc1155,
+          tokenId1,
+          token1Amount
+        );
+
+        offerAuth = {
+          offerHash,
+          taker: await borrower.getAddress(),
+          expiration: await time.latest() + 100,
+          collateralHash
+        }
+
+        authSignature = await signOfferAuth(
+          kettle,
+          authSigner,
+          offerAuth
+        );
+        
+        await testErc20.mint(lender, newLoanAmount);
+
+        expect(await testErc20.balanceOf(lender)).to.equal(newLoanAmount);
+
+        await expect(kettle.connect(borrower).refinance(
+          lien,
+          lienId,
+          newLoanAmount,
+          refinanceOffer,
+          offerAuth,
+          refinanceSignature,
+          authSignature,
+          []
+        )).to.be.revertedWithCustomError(kettle, "InvalidCollateralAmount()")
+      });
     });
 
     describe("Single ERC1155 (Without Custom Escrow)", () => {
@@ -1961,7 +2131,7 @@ describe("Kettle", () => {
         offerHash = await kettle.getLoanOfferHash(collectionOffer);
 
         collateralHash = await hashCollateral(
-          CollateralType.ERC1155_WITH_CRITERIA,
+          CollateralType.ERC1155,
           testErc1155,
           tokenId1,
           token1Amount
@@ -1981,7 +2151,7 @@ describe("Kettle", () => {
         );
 
         const collateralHash2 = await hashCollateral(
-          CollateralType.ERC1155_WITH_CRITERIA,
+          CollateralType.ERC1155,
           testErc1155,
           tokenId2,
           token2Amount
@@ -2106,7 +2276,7 @@ describe("Kettle", () => {
         offerHash = await kettle.getLoanOfferHash(refinanceOffer);
 
         collateralHash = await hashCollateral(
-          CollateralType.ERC1155_WITH_CRITERIA,
+          CollateralType.ERC1155,
           testErc1155,
           tokenId1,
           token1Amount
@@ -2126,7 +2296,7 @@ describe("Kettle", () => {
         );
 
         const collateralHash2 = await hashCollateral(
-          CollateralType.ERC1155_WITH_CRITERIA,
+          CollateralType.ERC1155,
           testErc1155,
           tokenId2,
           token2Amount

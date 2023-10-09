@@ -21,11 +21,13 @@ error CurrenciesDoNotMatch();
 error InsufficientRefinance();
 error InvalidAuctionDuration();
 error NoEscrowImplementation();
-error InvalidCollateralType();
+error TotalFeeTooHigh();
 
 // CollateralVerifier
 error InvalidCollateral();
 error InvalidCollateralCriteria();
+error InvalidCollateralType();
+error InvalidCollateralAmount();
 
 // OfferController
 error OfferExpired();
