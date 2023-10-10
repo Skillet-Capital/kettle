@@ -166,6 +166,7 @@ describe("Kettle", () => {
             return {
               lienId: parsedLog.lienId,
               lien: formatLien(
+                parsedLog.offerHash,
                 parsedLog.lender,
                 parsedLog.borrower,
                 parsedLog.collateralType,
@@ -298,6 +299,7 @@ describe("Kettle", () => {
             return {
               lienId: parsedLog.lienId,
               lien: formatLien(
+                parsedLog.offerHash,
                 parsedLog.lender,
                 parsedLog.borrower,
                 parsedLog.collateralType,
@@ -435,6 +437,7 @@ describe("Kettle", () => {
                 return {
                   lienId: parsedLog.lienId,
                   lien: formatLien(
+                    parsedLog.offerHash,
                     parsedLog.lender,
                     parsedLog.borrower,
                     parsedLog.collateralType,
@@ -557,6 +560,7 @@ describe("Kettle", () => {
             return {
               lienId: parsedLog.lienId,
               lien: formatLien(
+                parsedLog.offerHash,
                 parsedLog.lender,
                 parsedLog.borrower,
                 parsedLog.collateralType,
@@ -665,6 +669,7 @@ describe("Kettle", () => {
             return {
               lienId: parsedLog.lienId,
               lien: formatLien(
+                parsedLog.offerHash,
                 parsedLog.lender,
                 parsedLog.borrower,
                 parsedLog.collateralType,
@@ -804,6 +809,7 @@ describe("Kettle", () => {
                 return {
                   lienId: parsedLog.lienId,
                   lien: formatLien(
+                    parsedLog.offerHash,
                     parsedLog.lender,
                     parsedLog.borrower,
                     parsedLog.collateralType,

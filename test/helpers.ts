@@ -7,6 +7,7 @@ import { hexlify } from '@ethersproject/bytes';
 import { keccak256 } from '@ethersproject/keccak256';
 import { randomBytes } from '@ethersproject/random';
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
+import { ContractTransactionReceipt } from "ethers"
 
 import { CollateralType } from "../types";
 import { Kettle } from "../typechain-types";
@@ -124,6 +125,7 @@ export function generateMerkleProofForToken(tokenIds: BigNumberish[], token: Big
 }
 
 export function formatLien(
+  offerHash: string,
   lender: string,
   borrower: string,
   collateralType: string | number | bigint,
@@ -137,6 +139,7 @@ export function formatLien(
   startTime: string | number | bigint
 ): LienStruct {
   return {
+    offerHash,
     lender,
     borrower,
     collateralType,
@@ -235,7 +238,7 @@ export async function hashCollateral(
   collateralType: number,
   collection: Addressable,
   collateralId: BigInt | BigNumberish | number,
-  collateralAmount: BigInt | BigNumber | number
+  collateralAmount: BigInt | BigNumberish | number
 ) {
   const encoder = new ethers.TypedDataEncoder({
     Collateral: [
@@ -276,4 +279,87 @@ export async function signOfferAuth(
   }
 
   return await signer.signTypedData(domain, types, auth);
+}
+
+export async function prepareLoanOffer(
+  kettle: Kettle,
+  lender: Signer,
+  loanOfferParams: LoanOfferParams
+) {
+  const offer = await getLoanOffer(loanOfferParams);
+  const offerSignature = await signLoanOffer(
+    kettle,
+    lender,
+    offer
+  );
+
+  const offerHash = await kettle.getLoanOfferHash(offer);
+
+  return { offer, offerSignature, offerHash }
+}
+
+export interface CollateralParams {
+  collateralType: number,
+  collection: Addressable,
+  tokenId: BigInt | BigNumberish | number,
+  amount: BigInt | BigNumberish | number
+}
+
+export async function prepareLoanOfferAuth(
+  kettle: Kettle,
+  signer: Signer,
+  taker: Addressable,
+  expiration: number,
+  loanOffer: LoanOfferStruct,
+  collateral: CollateralParams
+) {
+
+  const offerHash = await kettle.getLoanOfferHash(loanOffer);
+  const collateralHash = await hashCollateral(
+    collateral.collateralType,
+    collateral.collection,
+    collateral.tokenId,
+    collateral.amount
+  );
+
+  const auth = {
+    offerHash,
+    taker: await taker.getAddress(),
+    expiration,
+    collateralHash
+  }
+
+  const authSignature = await signOfferAuth(
+    kettle,
+    signer,
+    auth
+  );
+
+  return { auth, authSignature }
+}
+
+export async function extractLien(receipt: ContractTransactionReceipt, kettle: Kettle) {
+  const kettleAddres = await kettle.getAddress();
+  const lienLog = receipt!.logs!.find(
+    (log) => (log.address === kettleAddres)
+  )!;
+
+  const parsedLog = kettle.interface.decodeEventLog("LoanOfferTaken", lienLog!.data, lienLog!.topics);
+  return {
+    lienId: parsedLog.lienId,
+    lien: formatLien(
+      parsedLog.offerHash,
+      parsedLog.lender,
+      parsedLog.borrower,
+      parsedLog.collateralType,
+      parsedLog.collection,
+      parsedLog.tokenId,
+      parsedLog.amount,
+      parsedLog.currency,
+      parsedLog.borrowAmount,
+      parsedLog.duration,
+      parsedLog.rate,
+      parsedLog.startTime
+    )
+  }
 }

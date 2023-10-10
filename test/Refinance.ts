@@ -15,7 +15,8 @@ import {
   signOfferAuth,
   hashCollateral,
   generateMerkleRootForCollection,
-  generateMerkleProofForToken
+  generateMerkleProofForToken,
+  extractLien
 } from "./helpers";
 
 import { CollateralType } from '../types/loanOffer';
@@ -159,30 +160,8 @@ describe("Kettle", () => {
         );
 
         ({ lien, lienId } = await txn.wait().then(
-          async (receipt) => {
-            const kettleAddres = await kettle.getAddress();
-            const lienLog = receipt!.logs!.find(
-              (log) => (log.address === kettleAddres)
-            )!;
-  
-            const parsedLog = kettle.interface.decodeEventLog("LoanOfferTaken", lienLog!.data, lienLog!.topics);
-            return {
-              lienId: parsedLog.lienId,
-              lien: formatLien(
-                parsedLog.lender,
-                parsedLog.borrower,
-                parsedLog.collateralType,
-                parsedLog.collection,
-                parsedLog.tokenId,
-                parsedLog.amount,
-                parsedLog.currency,
-                parsedLog.borrowAmount,
-                parsedLog.duration,
-                parsedLog.rate,
-                parsedLog.startTime
-              )
-            }
-          }));
+          async (receipt) => extractLien(receipt!, kettle)
+        ));
 
         repaymentAmount = await kettle.getRepaymentAmount(
           lien.borrowAmount,
@@ -884,6 +863,7 @@ describe("Kettle", () => {
             return {
               lienId: parsedLog.lienId,
               lien: formatLien(
+                parsedLog.offerHash,
                 parsedLog.lender,
                 parsedLog.borrower,
                 parsedLog.collateralType,
@@ -1070,6 +1050,7 @@ describe("Kettle", () => {
                 return {
                   lienId: parsedLog.lienId,
                   lien: formatLien(
+                    parsedLog.offerHash,
                     parsedLog.lender,
                     parsedLog.borrower,
                     parsedLog.collateralType,
@@ -1787,30 +1768,8 @@ describe("Kettle", () => {
         );
 
         ({ lien, lienId } = await txn.wait().then(
-          async (receipt) => {
-            const kettleAddres = await kettle.getAddress();
-            const lienLog = receipt!.logs!.find(
-              (log) => (log.address === kettleAddres)
-            )!;
-  
-            const parsedLog = kettle.interface.decodeEventLog("LoanOfferTaken", lienLog!.data, lienLog!.topics);
-            return {
-              lienId: parsedLog.lienId,
-              lien: formatLien(
-                parsedLog.lender,
-                parsedLog.borrower,
-                parsedLog.collateralType,
-                parsedLog.collection,
-                parsedLog.tokenId,
-                parsedLog.amount,
-                parsedLog.currency,
-                parsedLog.borrowAmount,
-                parsedLog.duration,
-                parsedLog.rate,
-                parsedLog.startTime
-              )
-            }
-          }));
+          async (receipt) => extractLien(receipt!, kettle)
+        ));
 
         repaymentAmount = await kettle.getRepaymentAmount(
           lien.borrowAmount,
@@ -2008,30 +1967,8 @@ describe("Kettle", () => {
         expect(await testErc1155.balanceOf(kettle, tokenId1)).to.equal(token1Amount);
 
         ({ lien, lienId } = await txn.wait().then(
-          async (receipt) => {
-            const kettleAddres = await kettle.getAddress();
-            const lienLog = receipt!.logs!.find(
-              (log) => (log.address === kettleAddres)
-            )!;
-  
-            const parsedLog = kettle.interface.decodeEventLog("LoanOfferTaken", lienLog!.data, lienLog!.topics);
-            return {
-              lienId: parsedLog.lienId,
-              lien: formatLien(
-                parsedLog.lender,
-                parsedLog.borrower,
-                parsedLog.collateralType,
-                parsedLog.collection,
-                parsedLog.tokenId,
-                parsedLog.amount,
-                parsedLog.currency,
-                parsedLog.borrowAmount,
-                parsedLog.duration,
-                parsedLog.rate,
-                parsedLog.startTime
-              )
-            }
-          }));
+          async (receipt) => extractLien(receipt!, kettle)
+        ));
 
         repaymentAmount = await kettle.getRepaymentAmount(
           lien.borrowAmount,
@@ -2209,6 +2146,7 @@ describe("Kettle", () => {
                 return {
                   lienId: parsedLog.lienId,
                   lien: formatLien(
+                    parsedLog.offerHash,
                     parsedLog.lender,
                     parsedLog.borrower,
                     parsedLog.collateralType,
