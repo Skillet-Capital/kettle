@@ -15,7 +15,7 @@ contract OfferController is IOfferController, Ownable, Signatures {
     uint256 private constant _LIQUIDATION_THRESHOLD = 100_000;
 
     mapping(address => mapping(uint256 => uint256)) public cancelledOrFulfilled;
-    mapping(bytes32 => uint256) private _amountTaken;
+    mapping(bytes32 => uint256) public _amountTaken;
     address public _AUTH_SIGNER;
     uint256[50] private _gap;
 
@@ -104,7 +104,7 @@ contract OfferController is IOfferController, Ownable, Signatures {
             netBorrowAmount,
             lien.rate,
             lien.duration,
-            block.timestamp
+            lien.startTime
         );
     }
 
@@ -169,7 +169,7 @@ contract OfferController is IOfferController, Ownable, Signatures {
             netBorrowAmount,
             lien.rate,
             lien.duration,
-            block.timestamp
+            lien.startTime
         );
     }
 
