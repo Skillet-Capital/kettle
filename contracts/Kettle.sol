@@ -17,9 +17,6 @@ import { CollateralType, Fee, Lien, LoanOffer, BorrowOffer, LoanOfferInput, Borr
 
 import { InvalidLien, Unauthorized, LienIsDefaulted, LienNotDefaulted, CollectionsDoNotMatch, CurrenciesDoNotMatch, NoEscrowImplementation, InvalidCollateralAmount, InvalidCollateralType, TotalFeeTooHigh } from "./lib/Errors.sol";
 
-import "hardhat/console.sol";
-
-
 /**
  *  _        _   _   _      
  * | |      | | | | | |     
@@ -585,7 +582,7 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
         if (offerHash == lien.offerHash) {
             diff = lien.startTime + lien.duration - block.timestamp;
         }
-        
+
         /* Update lien with new loan details. */
         Lien memory newLien = Lien({
             offerHash: offerHash,
