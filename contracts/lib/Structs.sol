@@ -29,6 +29,7 @@ struct LienPointer {
 }
 
 struct Lien {
+    bytes32 offerHash;
     address lender;
     address borrower;
     uint8 collateralType;

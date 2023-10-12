@@ -15,7 +15,8 @@ import {
   signOfferAuth,
   hashCollateral,
   generateMerkleRootForCollection,
-  generateMerkleProofForToken
+  generateMerkleProofForToken,
+  extractLien
 } from "./helpers";
 
 import { CollateralType } from '../types/loanOffer';
@@ -166,6 +167,7 @@ describe("Kettle", () => {
             return {
               lienId: parsedLog.lienId,
               lien: formatLien(
+                parsedLog.offerHash,
                 parsedLog.lender,
                 parsedLog.borrower,
                 parsedLog.collateralType,
@@ -285,6 +287,7 @@ describe("Kettle", () => {
             return {
               lienId: parsedLog.lienId,
               lien: formatLien(
+                parsedLog.offerHash,
                 parsedLog.lender,
                 parsedLog.borrower,
                 parsedLog.collateralType,
@@ -384,6 +387,7 @@ describe("Kettle", () => {
             return {
               lienId: parsedLog.lienId,
               lien: formatLien(
+                parsedLog.offerHash,
                 parsedLog.lender,
                 parsedLog.borrower,
                 parsedLog.collateralType,
@@ -504,6 +508,7 @@ describe("Kettle", () => {
             return {
               lienId: parsedLog.lienId,
               lien: formatLien(
+                parsedLog.offerHash,
                 parsedLog.lender,
                 parsedLog.borrower,
                 parsedLog.collateralType,
@@ -640,6 +645,7 @@ describe("Kettle", () => {
                 return {
                   lienId: parsedLog.lienId,
                   lien: formatLien(
+                    parsedLog.offerHash,
                     parsedLog.lender,
                     parsedLog.borrower,
                     parsedLog.collateralType,
