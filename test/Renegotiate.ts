@@ -119,10 +119,10 @@ describe("Kettle", () => {
           minAmount: 0,
           maxAmount: loanAmount,
           duration: MONTH_SECONDS,
-          rate: 1000,
+          rate: 120_000,
           expiration: blockTimestamp + DAY_SECONDS * 365,
           fees: [{
-            rate: "21",
+            rate: 2_100,
             recipient: await feeRecipient.getAddress()
           }]
         }));
@@ -160,9 +160,7 @@ describe("Kettle", () => {
       ));
     });
 
-
     it('should renegotiate loan with updated terms', async () => {
-
       const lienHash = await kettle.liens(lienId);
 
       // construct offer and signature
@@ -174,7 +172,7 @@ describe("Kettle", () => {
           lienId,
           lienHash,
           newDuration: MONTH_SECONDS * 2,
-          newRate: 500,
+          newRate: 60_000,
           expiration: blockTimestamp + DAY_SECONDS * 365,
           fees: []
         }
@@ -239,7 +237,7 @@ describe("Kettle", () => {
       // expect new lien to match old lien except offerHash, duration, and rate
       expect(newLien.offerHash).to.equal(offerHash);
       expect(newLien.duration).to.equal(MONTH_SECONDS * 2);
-      expect(newLien.rate).to.equal(500);
+      expect(newLien.rate).to.equal(60_000);
 
       // expect new lien to match old lien except offerHash, duration, and rate
       expect(newLien.offerHash).to.not.equal(lien.offerHash);
@@ -260,10 +258,99 @@ describe("Kettle", () => {
           lienId,
           lienHash,
           newDuration: MONTH_SECONDS * 2,
-          newRate: 1000,
+          newRate: 60_000,
           expiration: blockTimestamp + DAY_SECONDS * 365,
           fees: [{
-            rate: "21",
+            rate: 2_100,
+            recipient: await feeRecipient.getAddress()
+          }]
+        }
+      );
+
+      // construct auth and signature
+      const { auth: renegotiationAuth, authSignature } = await prepareRenegotiationOfferAuth(
+        kettle,
+        authSigner,
+        lender,
+        await time.latest() + DAY_SECONDS * 365,
+        renegotiationOffer,
+        {
+          collateralType: CollateralType.ERC721,
+          tokenId: tokenId1,
+          collection: testErc721,
+          amount: 1
+        }
+      );
+
+      // take renegotation offer
+      let txn = await kettle.connect(lender).renegotiate(
+        lien,
+        lienId,
+        renegotiationOffer,
+        renegotiationAuth,
+        offerSignature,
+        authSignature
+      );
+
+      // extract lien and lien id
+      const { lien: newLien, lienId: newLienId } = await txn.wait().then(
+        (receipt) => extractLien(receipt!, kettle)
+      );
+
+      // expect repayment amounts to be different
+      const oldRepayAmount = await kettle.getRepaymentAmount(
+        lien.borrowAmount,
+        lien.duration,
+        lien.rate
+      );
+
+      const newRepayAmount = await kettle.getRepaymentAmount(
+        newLien.borrowAmount,
+        newLien.duration,
+        newLien.rate
+      );
+
+      expect(newRepayAmount).to.equal(oldRepayAmount);
+
+      // expect new lien to match old lien non-updated fields
+      expect(newLien.lender).to.equal(lien.lender);
+      expect(newLien.borrower).to.equal(lien.borrower);
+      expect(newLien.currency).to.equal(lien.currency);
+      expect(newLien.collection).to.equal(lien.collection);
+      expect(newLien.collateralType).to.equal(lien.collateralType);
+      expect(newLien.tokenId).to.equal(lien.tokenId);
+      expect(newLien.amount).to.equal(lien.amount);
+      expect(newLien.borrowAmount).to.equal(lien.borrowAmount);
+      expect(newLien.startTime).to.equal(lien.startTime);
+
+      // expect new lien to match old lien except offerHash, duration, and rate
+      expect(newLien.offerHash).to.equal(offerHash);
+      expect(newLien.duration).to.equal(MONTH_SECONDS * 2);
+      expect(newLien.rate).to.equal(60_000);
+
+      // expect new lien to match old lien except offerHash, duration, and rate
+      expect(newLien.offerHash).to.not.equal(lien.offerHash);
+      expect(newLien.duration).to.not.equal(lien.duration);
+      expect(newLien.rate).to.not.equal(lien.rate);
+    })
+
+    it('should renegotiate with updated repayment', async () => {
+
+      const lienHash = await kettle.liens(lienId);
+
+      // construct offer and signature
+      const { offer: renegotiationOffer, offerSignature, offerHash } = await prepareRenegotiationOffer(
+        kettle,
+        borrower,
+        {
+          borrower,
+          lienId,
+          lienHash,
+          newDuration: MONTH_SECONDS * 2,
+          newRate: 120_000,
+          expiration: blockTimestamp + DAY_SECONDS * 365,
+          fees: [{
+            rate: 2_100,
             recipient: await feeRecipient.getAddress()
           }]
         }
@@ -328,7 +415,7 @@ describe("Kettle", () => {
       // expect new lien to match old lien except offerHash, duration, and rate
       expect(newLien.offerHash).to.equal(offerHash);
       expect(newLien.duration).to.equal(MONTH_SECONDS * 2);
-      expect(newLien.rate).to.equal(1000);
+      expect(newLien.rate).to.equal(120_000);
 
       // expect new lien to match old lien except offerHash, duration, and rate
       expect(newLien.offerHash).to.not.equal(lien.offerHash);

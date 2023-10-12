@@ -102,27 +102,27 @@ describe("Kettle", () => {
           minAmount: 0,
           maxAmount: loanAmount,
           duration: DAY_SECONDS * 7,
-          rate: 1000,
+          rate: 100_000,
           expiration: blockTimestamp + DAY_SECONDS * 7,
           fees: [
             {
-              rate: 50,
+              rate: 5_000,
               recipient: await feeRecipient.getAddress()
             },
             {
-              rate: 50,
+              rate: 5_000,
               recipient: await feeRecipient.getAddress()
             },
             {
-              rate: 50,
+              rate: 5_000,
               recipient: await feeRecipient.getAddress()
             },
             {
-              rate: 50,
+              rate: 5_000,
               recipient: await feeRecipient.getAddress()
             },
             {
-              rate: 50,
+              rate: 5_000,
               recipient: await feeRecipient.getAddress()
             }
           ]
@@ -199,10 +199,10 @@ describe("Kettle", () => {
           minAmount: 0,
           maxAmount: loanAmount,
           duration: DAY_SECONDS * 7,
-          rate: 1000,
+          rate: 100_000,
           expiration: blockTimestamp + DAY_SECONDS * 7,
           fees: [{
-            rate: 250,
+            rate: 25_000,
             recipient: await feeRecipient.getAddress()
           }]
         });
@@ -287,11 +287,11 @@ describe("Kettle", () => {
           minAmount: 0,
           maxAmount: loanAmount,
           duration: DAY_SECONDS * 7,
-          rate: 1000,
+          rate: 100_000,
           expiration: blockTimestamp + DAY_SECONDS * 7,
           fees: [
             {
-            rate: 9999,
+            rate: 999_999,
             recipient: await feeRecipient.getAddress()
           },
           {

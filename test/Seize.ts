@@ -116,7 +116,7 @@ describe("Kettle", () => {
           minAmount: 0,
           maxAmount: loanAmount,
           duration: DAY_SECONDS * 7,
-          rate: 1000,
+          rate: 100_000,
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
 
@@ -234,7 +234,7 @@ describe("Kettle", () => {
           minAmount: 0,
           maxAmount: loanAmount,
           duration: DAY_SECONDS * 7,
-          rate: 1000,
+          rate: 100_000,
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
 
@@ -336,7 +336,7 @@ describe("Kettle", () => {
           minAmount: 0,
           maxAmount: loanAmount,
           duration: DAY_SECONDS * 7,
-          rate: 1000,
+          rate: 100_000,
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
 
@@ -457,7 +457,7 @@ describe("Kettle", () => {
           minAmount: 0,
           maxAmount: loanAmount,
           duration: DAY_SECONDS * 7,
-          rate: 1000,
+          rate: 100_000,
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
 
@@ -558,7 +558,7 @@ describe("Kettle", () => {
           minAmount: 0,
           maxAmount: loanAmount,
           duration: DAY_SECONDS * 7,
-          rate: 1000,
+          rate: 100_000,
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
 
