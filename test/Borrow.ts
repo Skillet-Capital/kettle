@@ -14,7 +14,8 @@ import {
   generateMerkleRootForCollection, 
   generateMerkleProofForToken,
   hashCollateral,
-  signOfferAuth
+  signOfferAuth,
+  extractLien
 } from "./helpers";
 
 import { CollateralType } from '../types/loanOffer';
@@ -111,7 +112,7 @@ describe("Kettle", () => {
           minAmount: 0,
           maxAmount: loanAmount,
           duration: DAY_SECONDS * 7,
-          rate: 1000,
+          rate: 100_000,
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
 
@@ -145,7 +146,7 @@ describe("Kettle", () => {
       });
 
       it('should start loan', async () => {
-        await kettle.connect(borrower).borrow(
+        const txn = await kettle.connect(borrower).borrow(
           tokenOffer,
           offerAuth,
           offerSignature, 
@@ -156,8 +157,27 @@ describe("Kettle", () => {
           [],
         );
 
+        // extract lien and lien id
+        const { lien, lienId } = await txn.wait()
+          .then((receipt) => extractLien(receipt!, kettle)
+        );
+
         expect(await testErc721.ownerOf(tokenId1)).to.equal(await erc721Escrow.getAddress());
         expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
+
+        // expect lien to be properly formatted
+        expect(lien.lender).to.equal(await lender.getAddress());
+        expect(lien.borrower).to.equal(await borrower.getAddress());
+        expect(lien.borrowAmount).to.equal(loanAmount);
+
+        expect(lien.duration).to.equal(DAY_SECONDS * 7);
+        expect(lien.rate).to.equal(100_000);
+
+        const repayAmount = await kettle.getRepaymentAmount(
+          loanAmount,
+          DAY_SECONDS * 7,
+          100_000
+        );
       });
 
       it('should start loans in bulk', async () => {
@@ -171,7 +191,7 @@ describe("Kettle", () => {
           minAmount: 0,
           maxAmount: loanAmount,
           duration: DAY_SECONDS * 7,
-          rate: 1000,
+          rate: 100_000,
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
 
@@ -257,7 +277,7 @@ describe("Kettle", () => {
           minAmount: 0,
           maxAmount: loanAmount,
           duration: DAY_SECONDS * 7,
-          rate: 1000,
+          rate: 100_000,
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
 
@@ -402,7 +422,7 @@ describe("Kettle", () => {
           minAmount: 0,
           maxAmount: loanAmount,
           duration: DAY_SECONDS * 7,
-          rate: 1000,
+          rate: 100_000,
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
 
@@ -422,7 +442,7 @@ describe("Kettle", () => {
           minAmount: 0,
           maxAmount: loanAmount,
           duration: DAY_SECONDS * 7,
-          rate: 1000,
+          rate: 100_000,
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
 
@@ -720,7 +740,7 @@ describe("Kettle", () => {
           minAmount: 0,
           maxAmount: loanAmount,
           duration: DAY_SECONDS * 7,
-          rate: 1000,
+          rate: 100_000,
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
 
@@ -782,7 +802,7 @@ describe("Kettle", () => {
           minAmount: 0,
           maxAmount: loanAmount,
           duration: DAY_SECONDS * 7,
-          rate: 1000,
+          rate: 100_000,
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
 
@@ -878,7 +898,7 @@ describe("Kettle", () => {
           minAmount: 0,
           maxAmount: loanAmount,
           duration: DAY_SECONDS * 7,
-          rate: 1000,
+          rate: 100_000,
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
 

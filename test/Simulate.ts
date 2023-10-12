@@ -130,10 +130,10 @@ describe("Kettle", () => {
             maxAmount: loanAmount,
             // duration: DAY_SECONDS * 30,
             duration: 2628000,
-            rate: 1000,
+            rate: 100_000,
             expiration: blockTimestamp + DAY_SECONDS * 365,
             fees: [{
-              rate: "21",
+              rate: 2_100,
               recipient: await feeRecipient.getAddress()
             }]
         }));
@@ -198,7 +198,7 @@ describe("Kettle", () => {
         );
 
         // initialize fee amount
-        let feeAmount = loanAmount * BigInt(offer.fees[0].rate) / BigInt(10000);
+        let feeAmount = loanAmount * BigInt(offer.fees[0].rate) / BigInt(1_000_000);
         
         // initialize interest amount
         let interestAmount = repaymentAmount - loanAmount;
@@ -302,7 +302,7 @@ describe("Kettle", () => {
             maxAmount: loanAmount,
             // duration: DAY_SECONDS * 30,
             duration: 2628000,
-            rate: 1000,
+            rate: 100_000,
             expiration: blockTimestamp + DAY_SECONDS * 365,
             fees: [{
               rate: "0",
@@ -482,10 +482,10 @@ describe("Kettle", () => {
             minAmount: loanAmount,
             maxAmount: loanAmount,
             duration: DAY_SECONDS * 30,
-            rate: 1217,
+            rate: 121_667,
             expiration: blockTimestamp + DAY_SECONDS * 365,
             fees: [{
-              rate: "21",
+              rate: 2_100,
               recipient: await feeRecipient.getAddress()
             }]
         }));
@@ -550,7 +550,7 @@ describe("Kettle", () => {
         );
 
         // initialize fee amount
-        let feeAmount = loanAmount * BigInt(offer.fees[0].rate) / BigInt(10000);
+        let feeAmount = loanAmount * BigInt(offer.fees[0].rate) / BigInt(1_000_000);
         
         // initialize interest amount
         let interestAmount = repaymentAmount - loanAmount;
@@ -575,10 +575,10 @@ describe("Kettle", () => {
             minAmount: loanAmount,
             maxAmount: loanAmount,
             duration: DAY_SECONDS * 30,
-            rate: 1217,
+            rate: 121_667,
             expiration: blockTimestamp + DAY_SECONDS * 365,
             fees: [{
-              rate: "21",
+              rate: 2_100,
               recipient: await feeRecipient.getAddress()
             }]
         });

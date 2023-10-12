@@ -191,7 +191,7 @@ export async function signLoanOffer(
 
   const types = {
     Fee: [
-      { name: 'rate', type: 'uint16' },
+      { name: 'rate', type: 'uint256' },
       { name: 'recipient', type: 'address' }
     ],
     LoanOffer: [
@@ -232,7 +232,7 @@ export async function signBorrowOffer(
 
   const types = {
     Fee: [
-      { name: 'rate', type: 'uint16' },
+      { name: 'rate', type: 'uint256' },
       { name: 'recipient', type: 'address' }
     ],
     BorrowOffer: [
@@ -271,7 +271,7 @@ export async function signRenegotiationOffer(
 
   const types = {
     Fee: [
-      { name: 'rate', type: 'uint16' },
+      { name: 'rate', type: 'uint256' },
       { name: 'recipient', type: 'address' }
     ],
     RenegotiationOffer: [

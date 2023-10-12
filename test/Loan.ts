@@ -97,7 +97,7 @@ describe("Kettle", () => {
           currency: testErc20,
           loanAmount: loanAmount,
           duration: DAY_SECONDS * 7,
-          rate: 1000,
+          rate: 100_000,
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
         
@@ -153,7 +153,7 @@ describe("Kettle", () => {
           currency: testErc20,
           loanAmount: loanAmount,
           duration: DAY_SECONDS * 7,
-          rate: 1000,
+          rate: 100_000,
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
 
@@ -279,7 +279,7 @@ describe("Kettle", () => {
           currency: testErc20,
           loanAmount: loanAmount,
           duration: DAY_SECONDS * 7,
-          rate: 1000,
+          rate: 100_000,
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
 
@@ -342,7 +342,7 @@ describe("Kettle", () => {
           currency: testErc20,
           loanAmount: loanAmount,
           duration: DAY_SECONDS * 7,
-          rate: 1000,
+          rate: 100_000,
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
 
@@ -400,7 +400,7 @@ describe("Kettle", () => {
           currency: testErc20,
           loanAmount: loanAmount,
           duration: DAY_SECONDS * 7,
-          rate: 1000,
+          rate: 100_000,
           expiration: blockTimestamp + DAY_SECONDS * 7,
         });
 

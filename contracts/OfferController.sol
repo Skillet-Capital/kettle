@@ -12,7 +12,7 @@ import { Signatures } from "./lib/Signatures.sol";
 import { InvalidLoanAmount, InsufficientOffer, RateTooHigh, OfferExpired, OfferUnavailable, UnauthorizedOffer, UnauthorizedCollateral, UnauthorizedTaker, AuthorizationExpired } from "./lib/Errors.sol";
 
 contract OfferController is IOfferController, Ownable, Signatures {
-    uint256 private constant _LIQUIDATION_THRESHOLD = 100_000;
+    uint256 private constant _LIQUIDATION_THRESHOLD = 10_000_000;
 
     mapping(address => mapping(uint256 => uint256)) public cancelledOrFulfilled;
     mapping(bytes32 => uint256) public _amountTaken;
