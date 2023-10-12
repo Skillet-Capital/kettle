@@ -109,6 +109,21 @@ struct BorrowFullfillment {
 }
 
 /*//////////////////////////////////////////////////
+                RENEGOTIATE STRUCTS
+//////////////////////////////////////////////////*/
+
+struct RenegotiationOffer {
+    address borrower;
+    uint256 lienId;
+    bytes32 lienHash;
+    uint256 newDuration;
+    uint256 newRate;
+    uint256 expiration;
+    uint256 salt;
+    Fee[] fees;
+}
+
+/*//////////////////////////////////////////////////
                 REPAY STRUCTS
 //////////////////////////////////////////////////*/
 

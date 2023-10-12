@@ -21,6 +21,10 @@ error CurrenciesDoNotMatch();
 error InsufficientRefinance();
 error InvalidAuctionDuration();
 error NoEscrowImplementation();
+error InvalidLienHash();
+error InvalidDuration();
+error BorrowersDoNotMatch();
+error LienIdMismatch();
 error TotalFeeTooHigh();
 
 // CollateralVerifier

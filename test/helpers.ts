@@ -11,7 +11,7 @@ import { ContractTransactionReceipt } from "ethers"
 
 import { CollateralType } from "../types";
 import { Kettle } from "../typechain-types";
-import { BorrowOfferStruct, FeeStruct, LienStruct, LoanOfferStruct, OfferAuthStruct } from '../typechain-types/contracts/Kettle';
+import { BorrowOfferStruct, FeeStruct, LienStruct, LoanOfferStruct, RenegotiationOfferStruct, OfferAuthStruct } from '../typechain-types/contracts/Kettle';
 
 export interface LoanOfferParams {
   collateralType?: CollateralType;
@@ -76,6 +76,29 @@ export async function getBorrowOffer(params: BorrowOfferParams): Promise<BorrowO
     salt: BigInt(hexlify(randomBytes(32))),
     expiration: params.expiration,
     fees: params?.fees ?? []
+  }
+}
+
+export interface RenegotiationOfferParams {
+  borrower: Addressable,
+  lienId: bigint | string | number,
+  lienHash: string,
+  newDuration: bigint | string | number,
+  newRate: bigint | string | number,
+  expiration: bigint | string | number,
+  fees: FeeStruct[]
+}
+
+export async function getRenegotiationOffer(params: RenegotiationOfferParams): Promise<RenegotiationOfferStruct> {
+  return {
+    borrower: await params.borrower.getAddress(),
+    lienId: BigInt(params.lienId),
+    lienHash: params.lienHash,
+    newDuration: params.newDuration,
+    newRate: BigInt(params.newRate),
+    expiration: BigInt(params.expiration),
+    salt: BigInt(hexlify(randomBytes(32))),
+    fees: params.fees
   }
 }
 
@@ -234,6 +257,41 @@ export async function signBorrowOffer(
   });
 }
 
+export async function signRenegotiationOffer(
+  kettle: Kettle,
+  borrower: Signer,
+  renegotiationOffer: RenegotiationOfferStruct
+) {
+  const domain = {
+    name: 'Kettle',
+    version: '1',
+    chainId: 1,
+    verifyingContract: await kettle.getAddress()
+  }
+
+  const types = {
+    Fee: [
+      { name: 'rate', type: 'uint16' },
+      { name: 'recipient', type: 'address' }
+    ],
+    RenegotiationOffer: [
+      { name: 'lienId', type: 'uint256' },
+      { name: 'lienHash', type: 'bytes32' },
+      { name: 'newDuration', type: 'uint256' },
+      { name: 'newRate', type: 'uint256' },
+      { name: 'expiration', type: 'uint256' },
+      { name: 'salt', type: 'uint256' },
+      { name: 'nonce', type: 'uint256' },
+      { name: 'fees', type: 'Fee[]' }
+    ]
+  }
+
+  return await borrower.signTypedData(domain, types, {
+    ...renegotiationOffer,
+    nonce: await kettle.nonces(borrower)
+  });
+}
+
 export async function hashCollateral(
   collateralType: number,
   collection: Addressable,
@@ -305,6 +363,23 @@ export interface CollateralParams {
   amount: BigInt | BigNumberish | number
 }
 
+export async function prepareRenegotiationOffer(
+  kettle: Kettle,
+  borrower: Signer,
+  RenegotiationOfferParams: RenegotiationOfferParams
+) {
+  const offer = await getRenegotiationOffer(RenegotiationOfferParams);
+  const offerSignature = await signRenegotiationOffer(
+    kettle,
+    borrower,
+    offer
+  );
+
+  const offerHash = await kettle.getRenegotiationOfferHash(offer);
+
+  return { offer, offerSignature, offerHash }
+}
+
 export async function prepareLoanOfferAuth(
   kettle: Kettle,
   signer: Signer,
@@ -315,6 +390,39 @@ export async function prepareLoanOfferAuth(
 ) {
 
   const offerHash = await kettle.getLoanOfferHash(loanOffer);
+  const collateralHash = await hashCollateral(
+    collateral.collateralType,
+    collateral.collection,
+    collateral.tokenId,
+    collateral.amount
+  );
+
+  const auth = {
+    offerHash,
+    taker: await taker.getAddress(),
+    expiration,
+    collateralHash
+  }
+
+  const authSignature = await signOfferAuth(
+    kettle,
+    signer,
+    auth
+  );
+
+  return { auth, authSignature }
+}
+
+export async function prepareRenegotiationOfferAuth(
+  kettle: Kettle,
+  signer: Signer,
+  taker: Addressable,
+  expiration: number,
+  renegotiationOffer: RenegotiationOfferStruct,
+  collateral: CollateralParams
+) {
+
+  const offerHash = await kettle.getRenegotiationOfferHash(renegotiationOffer);
   const collateralHash = await hashCollateral(
     collateral.collateralType,
     collateral.collection,
