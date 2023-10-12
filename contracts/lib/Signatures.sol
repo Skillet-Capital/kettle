@@ -92,7 +92,7 @@ abstract contract Signatures is ISignatures {
 
         bytes memory feeTypestring = bytes.concat(
             "Fee(",
-            "uint16 rate,",
+            "uint256 rate,",
             "address recipient"
             ")"
         );

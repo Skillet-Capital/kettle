@@ -151,7 +151,7 @@ struct RefinanceFullfillment {
 //////////////////////////////////////////////////*/
 
 struct Fee {
-    uint16 rate;
+    uint256 rate;
     address recipient;
 }
 

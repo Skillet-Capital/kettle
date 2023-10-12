@@ -32,8 +32,6 @@ import { InvalidLien, Unauthorized, LienIsDefaulted, LienNotDefaulted, Collectio
  */
 
 contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, ERC721Holder, ERC1155Holder {
-    uint256 private constant _BASIS_POINTS = 10_000;
-    uint256 private constant _LIQUIDATION_THRESHOLD = 100_000;
     uint256 private _nextLienId;
 
     mapping(uint256 => bytes32) public liens;
