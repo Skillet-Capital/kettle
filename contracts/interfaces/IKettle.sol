@@ -12,15 +12,22 @@ interface IKettle is IOfferController {
 
     event Refinance(
         uint256 lienId,
-        address collection,
-        address currency,
-        uint256 amount,
         address oldLender,
         address newLender,
         uint256 oldBorrowAmount,
         uint256 newBorrowAmount,
+        uint256 oldDuration,
+        uint256 newDuration,
         uint256 oldRate,
         uint256 newRate
+    );
+
+    event Renegotiate(
+        uint256 lienId,
+        uint256 oldRate,
+        uint256 newRate,
+        uint256 oldDuration,
+        uint256 newDuration
     );
 
     function liens(uint256 lienId) external view returns (bytes32 lienHash);

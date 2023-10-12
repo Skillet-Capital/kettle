@@ -13,9 +13,9 @@ import { Signatures } from "./lib/Signatures.sol";
 import { OfferController } from "./OfferController.sol";
 import { IKettle } from "./interfaces/IKettle.sol";
 
-import { CollateralType, Fee, Lien, LoanOffer, BorrowOffer, LoanOfferInput, BorrowOfferInput, LienPointer, LoanFullfillment, BorrowFullfillment, RepayFullfillment, RefinanceFullfillment, OfferAuth } from "./lib/Structs.sol";
+import { CollateralType, Fee, Lien, LoanOffer, BorrowOffer, RenegotiationOffer, LoanOfferInput, BorrowOfferInput, LienPointer, LoanFullfillment, BorrowFullfillment, RepayFullfillment, RefinanceFullfillment, OfferAuth } from "./lib/Structs.sol";
 
-import { InvalidLien, Unauthorized, LienIsDefaulted, LienNotDefaulted, CollectionsDoNotMatch, CurrenciesDoNotMatch, NoEscrowImplementation, InvalidCollateralAmount, InvalidCollateralType, TotalFeeTooHigh } from "./lib/Errors.sol";
+import { InvalidLien, Unauthorized, LienIsDefaulted, LienNotDefaulted, CollectionsDoNotMatch, CurrenciesDoNotMatch, NoEscrowImplementation, InvalidCollateralAmount, InvalidCollateralType, TotalFeeTooHigh, InvalidLienHash, LienIdMismatch, InvalidDuration, BorrowersDoNotMatch } from "./lib/Errors.sol";
 
 /**
  *  _        _   _   _      
@@ -608,15 +608,106 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
 
         emit Refinance(
             lienId,
-            offer.collection,
-            offer.currency,
-            lien.amount,
             lien.lender,
             newLien.lender,
             lien.borrowAmount,
             newLien.borrowAmount,
+            lien.duration,
+            newLien.duration,
             lien.rate,
             newLien.rate
+        );
+    }
+
+    /*//////////////////////////////////////////////////
+                    RENEGOTIATE FLOWS
+    //////////////////////////////////////////////////*/
+
+    function renegotiate(
+        Lien calldata lien,
+        uint256 lienId,
+        RenegotiationOffer calldata offer,
+        OfferAuth calldata auth,
+        bytes calldata offerSignature,
+        bytes calldata authSignature
+    ) public validateLien(lien, lienId) lienIsActive(lien) {
+        if (msg.sender != lien.lender) {
+            revert Unauthorized();
+        }
+
+        if (lien.borrower != offer.borrower) {
+            revert BorrowersDoNotMatch();
+        }
+
+        payFees(
+            lien.currency, 
+            lien.borrower, 
+            lien.borrowAmount, 
+            offer.fees
+        );
+
+        /* Renegotiate initial loan to new loan (loanAmount must be within lender range) */
+        _renegotiate(lien, lienId, offer, auth, offerSignature, authSignature);
+    }
+
+    function _renegotiate(
+        Lien calldata lien,
+        uint256 lienId,
+        RenegotiationOffer calldata offer,
+        OfferAuth calldata auth,
+        bytes calldata offerSignature,
+        bytes calldata authSignature
+    ) internal {
+
+        // signed lien id must match provided lien id
+        if (lienId != offer.lienId) {
+            revert LienIdMismatch();
+        }
+        
+        // signed lien hash must match stored lien hash
+        // protects against renegotation after subsequent update to lien
+        bytes32 lienHash = liens[lienId];
+        if (lienHash != offer.lienHash) {
+            revert InvalidLienHash();
+        }
+
+        // updated duration must end after current block timestamp
+        if (lien.startTime + offer.newDuration < block.timestamp) {
+            revert InvalidDuration();
+        }
+
+        // initialize offer hash
+        bytes32 offerHash = _hashRenegotiationOffer(offer);
+
+        /* Update lien with new loan details. */
+        Lien memory newLien = Lien({
+            offerHash: offerHash,
+            lender: lien.lender,
+            borrower: lien.borrower,
+            collateralType: lien.collateralType,
+            collection: lien.collection,
+            amount: lien.amount,
+            tokenId: lien.tokenId,
+            currency: lien.currency,
+            borrowAmount: lien.borrowAmount,
+            startTime: lien.startTime,
+            duration: offer.newDuration,
+            rate: offer.newRate
+        });
+
+        unchecked {
+            liens[lienId] = keccak256(abi.encode(newLien));
+        }
+
+        /* Take the renegotiation offer. */
+        _takeRenegotiationOffer(offer, auth, offerSignature, authSignature, newLien, lienId);
+
+        emit Renegotiate(
+            lienId,
+            lien.rate,
+            newLien.rate,
+            lien.duration,
+            newLien.duration
         );
     }
 
