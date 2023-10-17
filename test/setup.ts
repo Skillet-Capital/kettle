@@ -19,6 +19,7 @@ export interface Fixture {
   lender: Signer,
   authSigner: Signer,
   feeRecipient: Signer,
+  signers: Signer[],
   testErc721: TestERC721;
   testErc1155: TestERC1155;
   testErc20: TestERC20;
@@ -30,7 +31,7 @@ export interface Fixture {
 }
 
 export async function getFixture(): Promise<Fixture> {
-  const [owner, borrower, lender, authSigner, feeRecipient] = await ethers.getSigners();
+  const [owner, borrower, lender, authSigner, feeRecipient, ...signers] = await ethers.getSigners();
 
   /* Deploy TestERC721 */
   const testErc721 = await ethers.deployContract("TestERC721");
@@ -99,6 +100,7 @@ export async function getFixture(): Promise<Fixture> {
     lender,
     authSigner,
     feeRecipient,
+    signers,
     testErc721,
     testErc1155,
     testErc20,

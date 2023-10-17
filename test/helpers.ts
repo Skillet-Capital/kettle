@@ -80,7 +80,7 @@ export async function getBorrowOffer(params: BorrowOfferParams): Promise<BorrowO
 }
 
 export interface RenegotiationOfferParams {
-  borrower: Addressable,
+  lender: Addressable,
   lienId: bigint | string | number,
   lienHash: string,
   newDuration: bigint | string | number,
@@ -91,7 +91,7 @@ export interface RenegotiationOfferParams {
 
 export async function getRenegotiationOffer(params: RenegotiationOfferParams): Promise<RenegotiationOfferStruct> {
   return {
-    borrower: await params.borrower.getAddress(),
+    lender: await params.lender.getAddress(),
     lienId: BigInt(params.lienId),
     lienHash: params.lienHash,
     newDuration: params.newDuration,
@@ -259,7 +259,7 @@ export async function signBorrowOffer(
 
 export async function signRenegotiationOffer(
   kettle: Kettle,
-  borrower: Signer,
+  lender: Signer,
   renegotiationOffer: RenegotiationOfferStruct
 ) {
   const domain = {
@@ -286,9 +286,9 @@ export async function signRenegotiationOffer(
     ]
   }
 
-  return await borrower.signTypedData(domain, types, {
+  return await lender.signTypedData(domain, types, {
     ...renegotiationOffer,
-    nonce: await kettle.nonces(borrower)
+    nonce: await kettle.nonces(lender)
   });
 }
 
@@ -365,13 +365,13 @@ export interface CollateralParams {
 
 export async function prepareRenegotiationOffer(
   kettle: Kettle,
-  borrower: Signer,
+  lender: Signer,
   RenegotiationOfferParams: RenegotiationOfferParams
 ) {
   const offer = await getRenegotiationOffer(RenegotiationOfferParams);
   const offerSignature = await signRenegotiationOffer(
     kettle,
-    borrower,
+    lender,
     offer
   );
 
