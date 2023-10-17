@@ -113,7 +113,7 @@ struct BorrowFullfillment {
 //////////////////////////////////////////////////*/
 
 struct RenegotiationOffer {
-    address borrower;
+    address lender;
     uint256 lienId;
     bytes32 lienHash;
     uint256 newDuration;

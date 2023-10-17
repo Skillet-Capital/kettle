@@ -274,7 +274,7 @@ abstract contract Signatures is ISignatures {
                     offer.newRate,
                     offer.expiration,
                     offer.salt,
-                    nonces[offer.borrower],
+                    nonces[offer.lender],
                     _packFees(offer.fees)
                 )
             );
