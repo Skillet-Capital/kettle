@@ -185,7 +185,7 @@ contract OfferController is IOfferController, Ownable, Signatures {
 
         _validateOffer(
             hash,
-            lien.borrower,
+            offer.lender,
             offerSignature,
             offer.expiration,
             offer.salt
@@ -203,7 +203,7 @@ contract OfferController is IOfferController, Ownable, Signatures {
             revert RateTooHigh();
         }
 
-        cancelledOrFulfilled[lien.borrower][offer.salt] = 1;
+        cancelledOrFulfilled[offer.lender][offer.salt] = 1;
 
         uint256 netBorrowAmount = Helpers.computeAmountAfterFees(
             lien.borrowAmount,

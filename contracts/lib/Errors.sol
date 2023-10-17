@@ -23,7 +23,7 @@ error InvalidAuctionDuration();
 error NoEscrowImplementation();
 error InvalidLienHash();
 error InvalidDuration();
-error BorrowersDoNotMatch();
+error LendersDoNotMatch();
 error LienIdMismatch();
 error TotalFeeTooHigh();
 

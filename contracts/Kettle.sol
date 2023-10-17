@@ -15,7 +15,7 @@ import { IKettle } from "./interfaces/IKettle.sol";
 
 import { CollateralType, Fee, Lien, LoanOffer, BorrowOffer, RenegotiationOffer, LoanOfferInput, BorrowOfferInput, LienPointer, LoanFullfillment, BorrowFullfillment, RepayFullfillment, RefinanceFullfillment, OfferAuth } from "./lib/Structs.sol";
 
-import { InvalidLien, Unauthorized, LienIsDefaulted, LienNotDefaulted, CollectionsDoNotMatch, CurrenciesDoNotMatch, NoEscrowImplementation, InvalidCollateralAmount, InvalidCollateralType, TotalFeeTooHigh, InvalidLienHash, LienIdMismatch, InvalidDuration, BorrowersDoNotMatch } from "./lib/Errors.sol";
+import { InvalidLien, Unauthorized, LienIsDefaulted, LienNotDefaulted, CollectionsDoNotMatch, CurrenciesDoNotMatch, NoEscrowImplementation, InvalidCollateralAmount, InvalidCollateralType, TotalFeeTooHigh, InvalidLienHash, LienIdMismatch, InvalidDuration, LendersDoNotMatch } from "./lib/Errors.sol";
 
 /**
  *  _        _   _   _      
@@ -491,6 +491,8 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
         bytes calldata authSignature,
         bytes32[] calldata proof
     ) public validateLien(lien, lienId) lienIsActive(lien) {
+
+        // caller must be borrower
         if (msg.sender != lien.borrower) {
             revert Unauthorized();
         }
@@ -629,22 +631,21 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
         bytes calldata offerSignature,
         bytes calldata authSignature
     ) public validateLien(lien, lienId) lienIsActive(lien) {
-        if (msg.sender != lien.lender) {
+
+        // caller must be borrower
+        if (msg.sender != lien.borrower) {
             revert Unauthorized();
         }
 
-        if (lien.borrower != offer.borrower) {
-            revert BorrowersDoNotMatch();
-        }
-
+        // borrower pays fees on original borrow amount and offer specified rate
         payFees(
             lien.currency, 
-            lien.borrower, 
+            msg.sender, 
             lien.borrowAmount, 
             offer.fees
         );
 
-        /* Renegotiate initial loan to new loan (loanAmount must be within lender range) */
+        // renegotiate initial loan to new loan
         _renegotiate(lien, lienId, offer, auth, offerSignature, authSignature);
     }
 
@@ -657,6 +658,11 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
         bytes calldata authSignature
     ) internal {
 
+        // current lender must be the renegotiation lender
+        if (lien.lender != offer.lender) {
+            revert LendersDoNotMatch();
+        }
+
         // signed lien id must match provided lien id
         if (lienId != offer.lienId) {
             revert LienIdMismatch();
@@ -664,9 +670,12 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
         
         // signed lien hash must match stored lien hash
         // protects against renegotation after subsequent update to lien
-        bytes32 lienHash = liens[lienId];
-        if (lienHash != offer.lienHash) {
-            revert InvalidLienHash();
+        // if provided lien hash is 0, pass through
+        if (offer.lienHash != bytes32(0)) {
+            bytes32 _lienHash = liens[lienId];
+            if (_lienHash != offer.lienHash) {
+                revert InvalidLienHash();
+            }
         }
 
         // updated duration must end after current block timestamp

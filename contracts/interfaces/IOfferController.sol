@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import { ISignatures } from "./ISignatures.sol";
 
 interface IOfferController is ISignatures {
+    
     event LoanOfferTaken(
         bytes32 offerHash,
         uint256 lienId,
