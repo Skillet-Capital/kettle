@@ -85,12 +85,7 @@ contract OfferController is IOfferController, Ownable, Signatures {
             _amountTaken[hash] = __amountTaken + lien.borrowAmount;
         }
 
-        uint256 netBorrowAmount = Helpers.computeAmountAfterFees(
-            lien.borrowAmount,
-            offer.fees
-        );
-
-        emit LoanOfferTaken(
+        emit Loan(
             hash,
             lienId,
             lien.lender,
@@ -101,10 +96,10 @@ contract OfferController is IOfferController, Ownable, Signatures {
             lien.tokenId,
             lien.amount,
             lien.borrowAmount,
-            netBorrowAmount,
             lien.rate,
             lien.duration,
-            lien.startTime
+            lien.startTime,
+            offer.fees
         );
     }
 
@@ -150,12 +145,7 @@ contract OfferController is IOfferController, Ownable, Signatures {
 
         cancelledOrFulfilled[offer.borrower][offer.salt] = 1;
 
-        uint256 netBorrowAmount = Helpers.computeAmountAfterFees(
-            lien.borrowAmount,
-            offer.fees
-        );
-
-        emit LoanOfferTaken(
+        emit Loan(
             hash,
             lienId,
             lien.lender,
@@ -166,10 +156,10 @@ contract OfferController is IOfferController, Ownable, Signatures {
             lien.tokenId,
             lien.amount,
             lien.borrowAmount,
-            netBorrowAmount,
             lien.rate,
             lien.duration,
-            lien.startTime
+            lien.startTime,
+            offer.fees
         );
     }
 
@@ -205,12 +195,7 @@ contract OfferController is IOfferController, Ownable, Signatures {
 
         cancelledOrFulfilled[offer.lender][offer.salt] = 1;
 
-        uint256 netBorrowAmount = Helpers.computeAmountAfterFees(
-            lien.borrowAmount,
-            offer.fees
-        );
-
-        emit LoanOfferTaken(
+        emit Loan(
             hash,
             lienId,
             lien.lender,
@@ -221,10 +206,10 @@ contract OfferController is IOfferController, Ownable, Signatures {
             lien.tokenId,
             lien.amount,
             lien.borrowAmount,
-            netBorrowAmount,
             lien.rate,
             lien.duration,
-            lien.startTime
+            lien.startTime,
+            offer.fees
         );
     }
 
