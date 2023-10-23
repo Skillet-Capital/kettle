@@ -121,7 +121,7 @@ describe("Kettle", () => {
           lender,
           {
             collateralType: CollateralType.ERC721,
-            collateralIdentifier: tokenId1,
+            identifier: tokenId1,
             lender: lender,
             collection: testErc721,
             currency: testErc20,
@@ -149,7 +149,7 @@ describe("Kettle", () => {
             collateralType: CollateralType.ERC721,
             tokenId: tokenId1,
             collection: testErc721,
-            amount: 1
+            size: 1
           }
         ));
 
@@ -192,7 +192,7 @@ describe("Kettle", () => {
 
         // get repayment amount
         repaymentAmount = await kettle.getRepaymentAmount(
-          lien.borrowAmount,
+          lien.amount,
           lien.rate,
           lien.duration
         );
@@ -293,7 +293,7 @@ describe("Kettle", () => {
           lender,
           {
             collateralType: CollateralType.ERC721,
-            collateralIdentifier: tokenId1,
+            identifier: tokenId1,
             lender: lender,
             collection: testErc721,
             currency: testErc20,
@@ -321,7 +321,7 @@ describe("Kettle", () => {
             collateralType: CollateralType.ERC721,
             tokenId: tokenId1,
             collection: testErc721,
-            amount: 1
+            size: 1
           }
         ));
 
@@ -364,7 +364,7 @@ describe("Kettle", () => {
 
         // get repayment amount
         repaymentAmount = await kettle.getRepaymentAmount(
-          lien.borrowAmount,
+          lien.amount,
           lien.rate,
           lien.duration
         );
@@ -411,7 +411,7 @@ describe("Kettle", () => {
           ));
 
           lastRepayAmount = await kettle.getRepaymentAmount(
-            lien.borrowAmount,
+            lien.amount,
             lien.rate,
             lien.duration
           );
@@ -474,7 +474,7 @@ describe("Kettle", () => {
           lender,
           {
             collateralType: CollateralType.ERC721,
-            collateralIdentifier: tokenId1,
+            identifier: tokenId1,
             lender: lender,
             collection: testErc721,
             currency: testErc20,
@@ -501,7 +501,7 @@ describe("Kettle", () => {
             collateralType: CollateralType.ERC721,
             tokenId: tokenId1,
             collection: testErc721,
-            amount: 1
+            size: 1
           }
         ));
 
@@ -544,7 +544,7 @@ describe("Kettle", () => {
 
         // get repayment amount
         repaymentAmount = await kettle.getRepaymentAmount(
-          lien.borrowAmount,
+          lien.amount,
           lien.rate,
           lien.duration
         );
@@ -567,7 +567,7 @@ describe("Kettle", () => {
           lender,
           {
             collateralType: CollateralType.ERC721,
-            collateralIdentifier: tokenId1,
+            identifier: tokenId1,
             lender: lender,
             collection: testErc721,
             currency: testErc20,
@@ -594,7 +594,7 @@ describe("Kettle", () => {
             collateralType: CollateralType.ERC721,
             tokenId: tokenId1,
             collection: testErc721,
-            amount: 1
+            size: 1
           }
         );
 
@@ -674,15 +674,6 @@ describe("Kettle", () => {
             (BigInt(lien.startTime) + BigInt(lien.duration) - BigInt(initialTime)) / BigInt(DAY_SECONDS),
             "\t|"
           );
-
-          // expect the difference in loan times to be the duration on early repayment
-          // expect(lien.startTime).to.equal(BigInt(lien.duration) * BigInt(i + 1 ) + BigInt(initialTime));
-
-          // // expect borrower balance to just be loan amount
-          // expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount - feeAmount);
-
-          // // expect lender balance to equal total interest paid
-          // expect(await testErc20.balanceOf(lender)).to.equal((interestAmount) * BigInt(i + 2));
         }
 
         // repay loan

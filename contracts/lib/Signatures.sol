@@ -102,10 +102,10 @@ abstract contract Signatures is ISignatures {
         loanOfferTypehash = keccak256(
             bytes.concat(
                 "LoanOffer(",
-                "address collection,",
                 "uint8 collateralType,",
-                "uint256 collateralIdentifier,",
-                "uint256 collateralAmount,",
+                "address collection,",
+                "uint256 identifier,",
+                "uint256 size,",
                 "address currency,",
                 "uint256 totalAmount,",
                 "uint256 minAmount,",
@@ -124,12 +124,12 @@ abstract contract Signatures is ISignatures {
         borrowOfferTypehash = keccak256(
             bytes.concat(
                 "BorrowOffer(",
-                "address collection,",
                 "uint8 collateralType,",
-                "uint256 collateralIdentifier,",
-                "uint256 collateralAmount,",
+                "address collection,",
+                "uint256 tokenId,",
+                "uint256 size,",
                 "address currency,",
-                "uint256 loanAmount,",
+                "uint256 amount,",
                 "uint256 duration,",
                 "uint256 rate,",
                 "uint256 salt,",
@@ -162,8 +162,8 @@ abstract contract Signatures is ISignatures {
                 "Collateral(",
                 "uint8 collateralType,",
                 "address collection,",
-                "uint256 collateralId,",
-                "uint256 collateralAmount"
+                "uint256 tokenId,",
+                "uint256 size"
                 ")"
             )
         );
@@ -220,10 +220,10 @@ abstract contract Signatures is ISignatures {
             keccak256(
                 abi.encode(
                     _LOAN_OFFER_TYPEHASH,
-                    offer.collection,
                     offer.collateralType,
-                    offer.collateralIdentifier,
-                    offer.collateralAmount,
+                    offer.collection,
+                    offer.identifier,
+                    offer.size,
                     offer.currency,
                     offer.totalAmount,
                     offer.minAmount,
@@ -245,12 +245,12 @@ abstract contract Signatures is ISignatures {
             keccak256(
                 abi.encode(
                     _BORROW_OFFER_TYPEHASH,
-                    offer.collection,
                     offer.collateralType,
-                    offer.collateralIdentifier,
-                    offer.collateralAmount,
+                    offer.collection,
+                    offer.tokenId,
+                    offer.size,
                     offer.currency,
-                    offer.loanAmount,
+                    offer.amount,
                     offer.duration,
                     offer.rate,
                     offer.salt,
@@ -283,8 +283,8 @@ abstract contract Signatures is ISignatures {
     function _hashCollateral(
         uint8 collateralType,
         address collection,
-        uint256 collateralId,
-        uint256 collateralAmount
+        uint256 tokenId,
+        uint256 size
     ) internal view returns (bytes32) {
         return 
             keccak256(
@@ -292,8 +292,8 @@ abstract contract Signatures is ISignatures {
                     _COLLATERAL_TYPEHASH, 
                     collateralType, 
                     collection,
-                    collateralId,
-                    collateralAmount
+                    tokenId,
+                    size
                 )
             );
     }

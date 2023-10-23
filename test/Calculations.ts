@@ -7,17 +7,10 @@ import {
 import { ethers } from "hardhat";
 import { Signer } from "ethers";
 
-import { formatEther, parseEther } from "ethers";
+import { parseEther } from "ethers";
 
 import { getFixture } from './setup';
 import {
-  formatLien,
-  getLoanOffer,
-  signLoanOffer,
-  signOfferAuth,
-  hashCollateral,
-  generateMerkleRootForCollection,
-  generateMerkleProofForToken,
   extractLien,
   prepareLoanOffer,
   prepareLoanOfferAuth
@@ -50,10 +43,6 @@ describe("Kettle", () => {
   let testErc1155: TestERC1155;
   let testErc20: TestERC20;
 
-  let verifier: CollateralVerifier;
-  let erc721Escrow: ERC721EscrowBase;
-  let erc1155Escrow: ERC1155EscrowBase;
-
   let blockTimestamp: number;
 
   beforeEach(async () => {
@@ -65,10 +54,7 @@ describe("Kettle", () => {
       kettle,
       testErc721,
       testErc1155,
-      testErc20,
-      erc721Escrow,
-      erc1155Escrow,
-      verifier
+      testErc20
     } = await loadFixture(getFixture));
 
     blockTimestamp = await time.latest();
@@ -117,7 +103,7 @@ describe("Kettle", () => {
         lender,
         {
           collateralType: CollateralType.ERC721,
-          collateralIdentifier: tokenId1,
+          identifier: tokenId1,
           lender: lender,
           collection: testErc721,
           currency: testErc20,
@@ -144,7 +130,7 @@ describe("Kettle", () => {
           collateralType: CollateralType.ERC721,
           tokenId: tokenId1,
           collection: testErc721,
-          amount: 1
+          size: 1
         }
       ));
 
@@ -168,7 +154,7 @@ describe("Kettle", () => {
       // expect lien to have correct rate and duration
       expect(lien.rate).to.equal(100_000);
       expect(lien.duration).to.equal(DAY_SECONDS * 365);
-      expect(lien.borrowAmount).to.equal(loanAmount);
+      expect(lien.amount).to.equal(loanAmount);
 
       // calculate repayment amount
       const repaymentAmount = await kettle.getRepaymentAmount(

@@ -31,7 +31,7 @@ error TotalFeeTooHigh();
 error InvalidCollateral();
 error InvalidCollateralCriteria();
 error InvalidCollateralType();
-error InvalidCollateralAmount();
+error InvalidCollateralSize();
 
 // OfferController
 error OfferExpired();

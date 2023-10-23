@@ -71,40 +71,35 @@ contract OfferController is IOfferController, Ownable, Signatures {
             revert RateTooHigh();
         }
         if (
-            lien.borrowAmount > offer.maxAmount ||
-            lien.borrowAmount < offer.minAmount
+            lien.amount > offer.maxAmount ||
+            lien.amount < offer.minAmount
         ) {
             revert InvalidLoanAmount();
         }
         uint256 __amountTaken = _amountTaken[hash];
-        if (offer.totalAmount - __amountTaken < lien.borrowAmount) {
+        if (offer.totalAmount - __amountTaken < lien.amount) {
             revert InsufficientOffer();
         }
 
         unchecked {
-            _amountTaken[hash] = __amountTaken + lien.borrowAmount;
+            _amountTaken[hash] = __amountTaken + lien.amount;
         }
 
-        uint256 netBorrowAmount = Helpers.computeAmountAfterFees(
-            lien.borrowAmount,
-            offer.fees
-        );
-
-        emit LoanOfferTaken(
+        emit Loan(
             hash,
             lienId,
             lien.lender,
             lien.borrower,
-            lien.currency,
             lien.collateralType,
             lien.collection,
             lien.tokenId,
+            lien.size,
+            lien.currency,
             lien.amount,
-            lien.borrowAmount,
-            netBorrowAmount,
             lien.rate,
             lien.duration,
-            lien.startTime
+            lien.startTime,
+            offer.fees
         );
     }
 
@@ -150,26 +145,21 @@ contract OfferController is IOfferController, Ownable, Signatures {
 
         cancelledOrFulfilled[offer.borrower][offer.salt] = 1;
 
-        uint256 netBorrowAmount = Helpers.computeAmountAfterFees(
-            lien.borrowAmount,
-            offer.fees
-        );
-
-        emit LoanOfferTaken(
+        emit Loan(
             hash,
             lienId,
             lien.lender,
             lien.borrower,
-            lien.currency,
             lien.collateralType,
             lien.collection,
             lien.tokenId,
+            lien.size,
+            lien.currency,
             lien.amount,
-            lien.borrowAmount,
-            netBorrowAmount,
             lien.rate,
             lien.duration,
-            lien.startTime
+            lien.startTime,
+            offer.fees
         );
     }
 
@@ -205,26 +195,21 @@ contract OfferController is IOfferController, Ownable, Signatures {
 
         cancelledOrFulfilled[offer.lender][offer.salt] = 1;
 
-        uint256 netBorrowAmount = Helpers.computeAmountAfterFees(
-            lien.borrowAmount,
-            offer.fees
-        );
-
-        emit LoanOfferTaken(
+        emit Loan(
             hash,
             lienId,
             lien.lender,
             lien.borrower,
-            lien.currency,
             lien.collateralType,
             lien.collection,
             lien.tokenId,
+            lien.size,
+            lien.currency,
             lien.amount,
-            lien.borrowAmount,
-            netBorrowAmount,
             lien.rate,
             lien.duration,
-            lien.startTime
+            lien.startTime,
+            offer.fees
         );
     }
 
@@ -240,7 +225,7 @@ contract OfferController is IOfferController, Ownable, Signatures {
             lien.collateralType,
             lien.collection,
             lien.tokenId,
-            lien.amount
+            lien.size
         );
 
         bytes32 authHash = _hashOfferAuth(auth);

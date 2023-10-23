@@ -15,8 +15,8 @@ enum CollateralType {
 struct Collateral {
     uint8 collateralType;
     address collection;
-    uint256 collateralId;
-    uint256 collateralAmount;
+    uint256 tokenId;
+    uint256 size;
 }
 
 /*//////////////////////////////////////////////////
@@ -35,9 +35,9 @@ struct Lien {
     uint8 collateralType;
     address collection;
     uint256 tokenId;
-    uint256 amount;
+    uint256 size;
     address currency;
-    uint256 borrowAmount;
+    uint256 amount;
     uint256 duration;
     uint256 rate;
     uint256 startTime;
@@ -49,10 +49,10 @@ struct Lien {
 
 struct LoanOffer {
     address lender;
-    address collection;
     uint8 collateralType;
-    uint256 collateralIdentifier;
-    uint256 collateralAmount;
+    address collection;
+    uint256 identifier;
+    uint256 size;
     address currency;
     uint256 totalAmount;
     uint256 minAmount;
@@ -71,8 +71,8 @@ struct LoanOfferInput {
 
 struct LoanFullfillment {
     uint256 offerIndex;
-    uint256 loanAmount;
-    uint256 collateralIdentifier;
+    uint256 amount;
+    uint256 tokenId;
     OfferAuth auth;
     bytes authSignature;
     bytes32[] proof;
@@ -84,12 +84,12 @@ struct LoanFullfillment {
 
 struct BorrowOffer {
     address borrower;
-    address collection;
     uint8 collateralType;
-    uint256 collateralIdentifier;
-    uint256 collateralAmount;
+    address collection;
+    uint256 tokenId;
+    uint256 size;
     address currency;
-    uint256 loanAmount;
+    uint256 amount;
     uint256 duration;
     uint256 rate;
     uint256 salt;
@@ -140,7 +140,7 @@ struct RefinanceFullfillment {
     Lien lien;
     uint256 lienId;
     uint256 offerIndex;
-    uint256 loanAmount;
+    uint256 amount;
     bytes32[] proof;
     OfferAuth auth;
     bytes authSignature;

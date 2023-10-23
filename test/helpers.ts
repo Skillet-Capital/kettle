@@ -14,11 +14,11 @@ import { Kettle } from "../typechain-types";
 import { BorrowOfferStruct, FeeStruct, LienStruct, LoanOfferStruct, RenegotiationOfferStruct, OfferAuthStruct } from '../typechain-types/contracts/Kettle';
 
 export interface LoanOfferParams {
-  collateralType?: CollateralType;
-  collateralIdentifier: number | string | bigint;
-  collateralAmount?: number | string | bigint;
   lender: Addressable;
+  collateralType?: CollateralType;
   collection: Addressable;
+  identifier: number | string | bigint;
+  size?: number | string | bigint;
   currency: Addressable;
   totalAmount: number | string | bigint;
   minAmount: number | string | bigint;
@@ -32,11 +32,11 @@ export interface LoanOfferParams {
 export async function getLoanOffer(params: LoanOfferParams): Promise<LoanOfferStruct> {
   return {
     lender: await params.lender.getAddress(),
-    collection: await params.collection.getAddress(),
-    currency: await params.currency.getAddress(),
     collateralType: params?.collateralType ?? CollateralType.ERC721,
-    collateralIdentifier: BigInt(params.collateralIdentifier),
-    collateralAmount: params?.collateralAmount ?? 1,
+    collection: await params.collection.getAddress(),
+    identifier: BigInt(params.identifier),
+    size: params?.size ?? 1,
+    currency: await params.currency.getAddress(),
     totalAmount: params.totalAmount,
     minAmount: params.minAmount,
     maxAmount: params.maxAmount,
@@ -49,13 +49,13 @@ export async function getLoanOffer(params: LoanOfferParams): Promise<LoanOfferSt
 }
 
 export interface BorrowOfferParams {
-  collateralType?: CollateralType;
-  collateralIdentifier: number | string | bigint;
-  collateralAmount?: number | string | bigint;
   borrower: Addressable;
+  collateralType?: CollateralType;
   collection: Addressable;
+  tokenId: number | string | bigint;
+  size?: number | string | bigint;
   currency: Addressable;
-  loanAmount: number | string | bigint;
+  amount: number | string | bigint;
   duration: number | string | bigint;
   rate: number | string | bigint;
   expiration: number | string | bigint;
@@ -68,9 +68,9 @@ export async function getBorrowOffer(params: BorrowOfferParams): Promise<BorrowO
     collection: await params.collection.getAddress(),
     currency: await params.currency.getAddress(),
     collateralType: params?.collateralType ?? CollateralType.ERC721,
-    collateralIdentifier: BigInt(params.collateralIdentifier),
-    collateralAmount: params?.collateralAmount ?? 1,
-    loanAmount: params.loanAmount,
+    tokenId: BigInt(params.tokenId),
+    size: params?.size ?? 1,
+    amount: params.amount,
     duration: params.duration,
     rate: params.rate,
     salt: BigInt(hexlify(randomBytes(32))),
@@ -99,16 +99,6 @@ export async function getRenegotiationOffer(params: RenegotiationOfferParams): P
     expiration: BigInt(params.expiration),
     salt: BigInt(hexlify(randomBytes(32))),
     fees: params.fees
-  }
-}
-
-export function getFee(
-  rate: bigint,
-  recipient: string
-): FeeStruct {
-  return {
-    rate,
-    recipient
   }
 }
 
@@ -154,9 +144,9 @@ export function formatLien(
   collateralType: string | number | bigint,
   collection: string,
   tokenId: string | number | bigint,
-  amount: string | number | bigint,
+  size: string | number | bigint,
   currency: string,
-  borrowAmount: string | number | bigint,
+  amount: string | number | bigint,
   duration: string | number | bigint,
   rate: string | number | bigint,
   startTime: string | number | bigint
@@ -168,9 +158,9 @@ export function formatLien(
     collateralType,
     collection,
     tokenId: BigInt(tokenId),
-    amount,
+    size,
     currency,
-    borrowAmount,
+    amount,
     duration,
     rate,
     startTime
@@ -195,10 +185,10 @@ export async function signLoanOffer(
       { name: 'recipient', type: 'address' }
     ],
     LoanOffer: [
-      { name: 'collection', type: 'address' },
       { name: 'collateralType', type: 'uint8' },
-      { name: 'collateralIdentifier', type: 'uint256' },
-      { name: 'collateralAmount', type: 'uint256' },
+      { name: 'collection', type: 'address' },
+      { name: 'identifier', type: 'uint256' },
+      { name: 'size', type: 'uint256' },
       { name: 'currency', type: 'address' },
       { name: 'totalAmount', type: 'uint256' },
       { name: 'minAmount', type: 'uint256' },
@@ -236,12 +226,12 @@ export async function signBorrowOffer(
       { name: 'recipient', type: 'address' }
     ],
     BorrowOffer: [
-      { name: 'collection', type: 'address' },
       { name: 'collateralType', type: 'uint8' },
-      { name: 'collateralIdentifier', type: 'uint256' },
-      { name: 'collateralAmount', type: 'uint256' },
+      { name: 'collection', type: 'address' },
+      { name: 'tokenId', type: 'uint256' },
+      { name: 'size', type: 'uint256' },
       { name: 'currency', type: 'address' },
-      { name: 'loanAmount', type: 'uint256' },
+      { name: 'amount', type: 'uint256' },
       { name: 'duration', type: 'uint256' },
       { name: 'rate', type: 'uint256' },
       { name: 'salt', type: 'uint256' },
@@ -295,23 +285,23 @@ export async function signRenegotiationOffer(
 export async function hashCollateral(
   collateralType: number,
   collection: Addressable,
-  collateralId: BigInt | BigNumberish | number,
-  collateralAmount: BigInt | BigNumberish | number
+  tokenId: BigInt | BigNumberish | number,
+  size: BigInt | BigNumberish | number
 ) {
   const encoder = new ethers.TypedDataEncoder({
     Collateral: [
       { name: "collateralType", type: "uint8" },
       { name: "collection", type: "address" },
-      { name: "collateralId", type: "uint256" },
-      { name: "collateralAmount", type: "uint256" }
+      { name: "tokenId", type: "uint256" },
+      { name: "size", type: "uint256" }
     ]
   });
 
   return encoder.hash({
     collateralType,
     collection: await collection.getAddress(),
-    collateralId,
-    collateralAmount
+    tokenId,
+    size
   })
 }
 
@@ -356,11 +346,28 @@ export async function prepareLoanOffer(
   return { offer, offerSignature, offerHash }
 }
 
+export async function prepareBorrowOffer(
+  kettle: Kettle,
+  borrower: Signer,
+  BorrowOfferParams: BorrowOfferParams
+) {
+  const offer = await getBorrowOffer(BorrowOfferParams);
+  const offerSignature = await signBorrowOffer(
+    kettle,
+    borrower,
+    offer
+  );
+
+  const offerHash = await kettle.getBorrowOfferHash(offer);
+
+  return { offer, offerSignature, offerHash }
+}
+
 export interface CollateralParams {
   collateralType: number,
   collection: Addressable,
   tokenId: BigInt | BigNumberish | number,
-  amount: BigInt | BigNumberish | number
+  size: BigInt | BigNumberish | number
 }
 
 export async function prepareRenegotiationOffer(
@@ -394,7 +401,40 @@ export async function prepareLoanOfferAuth(
     collateral.collateralType,
     collateral.collection,
     collateral.tokenId,
-    collateral.amount
+    collateral.size
+  );
+
+  const auth = {
+    offerHash,
+    taker: await taker.getAddress(),
+    expiration,
+    collateralHash
+  }
+
+  const authSignature = await signOfferAuth(
+    kettle,
+    signer,
+    auth
+  );
+
+  return { auth, authSignature }
+}
+
+export async function prepareBorrowOfferAuth(
+  kettle: Kettle,
+  signer: Signer,
+  taker: Addressable,
+  expiration: number,
+  borrowOffer: BorrowOfferStruct,
+  collateral: CollateralParams
+) {
+
+  const offerHash = await kettle.getBorrowOfferHash(borrowOffer);
+  const collateralHash = await hashCollateral(
+    collateral.collateralType,
+    collateral.collection,
+    collateral.tokenId,
+    collateral.size
   );
 
   const auth = {
@@ -427,7 +467,7 @@ export async function prepareRenegotiationOfferAuth(
     collateral.collateralType,
     collateral.collection,
     collateral.tokenId,
-    collateral.amount
+    collateral.size
   );
 
   const auth = {
@@ -452,7 +492,7 @@ export async function extractLien(receipt: ContractTransactionReceipt, kettle: K
     (log) => (log.address === kettleAddres)
   )!;
 
-  const parsedLog = kettle.interface.decodeEventLog("LoanOfferTaken", lienLog!.data, lienLog!.topics);
+  const parsedLog = kettle.interface.decodeEventLog("Loan", lienLog!.data, lienLog!.topics);
   return {
     lienId: parsedLog.lienId,
     lien: formatLien(
@@ -462,12 +502,42 @@ export async function extractLien(receipt: ContractTransactionReceipt, kettle: K
       parsedLog.collateralType,
       parsedLog.collection,
       parsedLog.tokenId,
-      parsedLog.amount,
+      parsedLog.size,
       parsedLog.currency,
-      parsedLog.borrowAmount,
+      parsedLog.amount,
       parsedLog.duration,
       parsedLog.rate,
       parsedLog.startTime
     )
   }
+}
+
+export async function extractLiens(receipt: ContractTransactionReceipt, kettle: Kettle) {
+  const kettleAddres = await kettle.getAddress();
+  const lienLogs = receipt!.logs!.filter(
+    (log) => (log.address === kettleAddres)
+  )!;
+
+  return lienLogs.map(
+    (log) => {
+      const parsedLog = kettle.interface.decodeEventLog("Loan", log!.data, log!.topics);
+      return {
+        lienId: parsedLog.lienId,
+        lien: formatLien(
+          parsedLog.offerHash,
+          parsedLog.lender,
+          parsedLog.borrower,
+          parsedLog.collateralType,
+          parsedLog.collection,
+          parsedLog.tokenId,
+          parsedLog.size,
+          parsedLog.currency,
+          parsedLog.amount,
+          parsedLog.duration,
+          parsedLog.rate,
+          parsedLog.startTime
+        )
+      }
+    }
+  );
 }
