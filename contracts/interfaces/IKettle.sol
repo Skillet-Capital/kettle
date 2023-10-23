@@ -6,7 +6,16 @@ import { IOfferController } from "./IOfferController.sol";
 import { OfferAuth, LoanOffer, BorrowOffer, LoanOfferInput, LoanFullfillment, BorrowOfferInput, BorrowFullfillment, RepayFullfillment, RefinanceFullfillment, Lien, LienPointer } from "../lib/Structs.sol";
 
 interface IKettle is IOfferController {
-    event Repay(uint256 lienId, address collection, uint256 amount);
+    event Repay(
+        uint256 lienId, 
+        address collection, 
+        uint256 startTime,
+        uint256 repayTime,
+        uint256 amount,
+        uint256 rate,
+        uint256 duration,
+        uint256 repayAmount
+    );
 
     event Seize(uint256 lienId, address collection);
 
