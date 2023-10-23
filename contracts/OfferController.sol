@@ -49,10 +49,9 @@ contract OfferController is IOfferController, Ownable, Signatures {
         Lien memory lien,
         uint256 lienId
     ) internal {
-        bytes32 hash = _hashLoanOffer(offer);
 
         _validateOffer(
-            hash,
+            lien.offerHash,
             offer.lender,
             offerSignature,
             offer.expiration,
@@ -60,7 +59,7 @@ contract OfferController is IOfferController, Ownable, Signatures {
         );
 
         _validateAuth(
-            hash, 
+            lien.offerHash, 
             msg.sender, 
             auth, 
             lien, 
@@ -76,17 +75,17 @@ contract OfferController is IOfferController, Ownable, Signatures {
         ) {
             revert InvalidLoanAmount();
         }
-        uint256 __amountTaken = _amountTaken[hash];
+        uint256 __amountTaken = _amountTaken[lien.offerHash];
         if (offer.totalAmount - __amountTaken < lien.amount) {
             revert InsufficientOffer();
         }
 
         unchecked {
-            _amountTaken[hash] = __amountTaken + lien.amount;
+            _amountTaken[lien.offerHash] = __amountTaken + lien.amount;
         }
 
         emit Loan(
-            hash,
+            lien.offerHash,
             lienId,
             lien.lender,
             lien.borrower,
@@ -121,10 +120,9 @@ contract OfferController is IOfferController, Ownable, Signatures {
         Lien memory lien,
         uint256 lienId
     ) internal {
-        bytes32 hash = _hashBorrowOffer(offer);
 
         _validateOffer(
-            hash,
+            lien.offerHash,
             offer.borrower,
             offerSignature,
             offer.expiration,
@@ -132,7 +130,7 @@ contract OfferController is IOfferController, Ownable, Signatures {
         );
 
         _validateAuth(
-            hash, 
+            lien.offerHash, 
             msg.sender, 
             auth,
             lien, 
@@ -146,7 +144,7 @@ contract OfferController is IOfferController, Ownable, Signatures {
         cancelledOrFulfilled[offer.borrower][offer.salt] = 1;
 
         emit Loan(
-            hash,
+            lien.offerHash,
             lienId,
             lien.lender,
             lien.borrower,
@@ -171,10 +169,9 @@ contract OfferController is IOfferController, Ownable, Signatures {
         Lien memory lien,
         uint256 lienId
     ) internal {
-        bytes32 hash = _hashRenegotiationOffer(offer);
 
         _validateOffer(
-            hash,
+            lien.offerHash,
             offer.lender,
             offerSignature,
             offer.expiration,
@@ -182,7 +179,7 @@ contract OfferController is IOfferController, Ownable, Signatures {
         );
 
         _validateAuth(
-            hash, 
+            lien.offerHash, 
             msg.sender, 
             auth,
             lien, 
@@ -196,7 +193,7 @@ contract OfferController is IOfferController, Ownable, Signatures {
         cancelledOrFulfilled[offer.lender][offer.salt] = 1;
 
         emit Loan(
-            hash,
+            lien.offerHash,
             lienId,
             lien.lender,
             lien.borrower,

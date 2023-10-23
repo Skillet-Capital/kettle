@@ -587,6 +587,9 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
         bytes32 offerHash = _hashLoanOffer(offer);
 
         // If the offer hashes are the same, we need to update the start time for refinances
+        // this allows for early repayments with rollovers without penalizing borrower
+        // based on the time of early repayment 
+        // e.g. start sept 1, pay on sept 20, next payment due nov 1
         uint256 diff = 0;
         if (offerHash == lien.offerHash) {
             diff = lien.startTime + lien.duration - block.timestamp;
@@ -679,7 +682,7 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
         
         // signed lien hash must match stored lien hash
         // protects against renegotation after subsequent update to lien
-        // if provided lien hash is 0, pass through
+        // if provided lien hash is 0, pass through (allows for renegoitation once per lien)
         if (offer.lienHash != bytes32(0)) {
             bytes32 _lienHash = liens[lienId];
             if (_lienHash != offer.lienHash) {
