@@ -109,7 +109,7 @@ describe("Kettle", () => {
         lender,
         {
           collateralType: CollateralType.ERC721,
-          collateralIdentifier: tokenId1,
+          identifier: tokenId1,
           lender: lender,
           collection: testErc721,
           currency: testErc20,
@@ -136,7 +136,7 @@ describe("Kettle", () => {
           collateralType: CollateralType.ERC721,
           tokenId: tokenId1,
           collection: testErc721,
-          amount: 1
+          size: 1
         }
       ));
 
@@ -187,7 +187,7 @@ describe("Kettle", () => {
           collateralType: CollateralType.ERC721,
           tokenId: tokenId1,
           collection: testErc721,
-          amount: 1
+          size: 1
         }
       );
 
@@ -208,13 +208,13 @@ describe("Kettle", () => {
 
       // expect repayment amounts to be the same
       const oldRepayAmount = await kettle.getRepaymentAmount(
-        lien.borrowAmount,
+        lien.amount,
         lien.duration,
         lien.rate
       );
 
       const newRepayAmount = await kettle.getRepaymentAmount(
-        newLien.borrowAmount,
+        newLien.amount,
         newLien.duration,
         newLien.rate
       );
@@ -228,8 +228,8 @@ describe("Kettle", () => {
       expect(newLien.collection).to.equal(lien.collection);
       expect(newLien.collateralType).to.equal(lien.collateralType);
       expect(newLien.tokenId).to.equal(lien.tokenId);
+      expect(newLien.size).to.equal(lien.size);
       expect(newLien.amount).to.equal(lien.amount);
-      expect(newLien.borrowAmount).to.equal(lien.borrowAmount);
       expect(newLien.startTime).to.equal(lien.startTime);
 
       // expect new lien to match old lien except offerHash, duration, and rate
@@ -272,7 +272,7 @@ describe("Kettle", () => {
           collateralType: CollateralType.ERC721,
           tokenId: tokenId1,
           collection: testErc721,
-          amount: 1
+          size: 1
         }
       );
 
@@ -293,13 +293,13 @@ describe("Kettle", () => {
 
       // expect repayment amounts to be the same
       const oldRepayAmount = await kettle.getRepaymentAmount(
-        lien.borrowAmount,
+        lien.amount,
         lien.duration,
         lien.rate
       );
 
       const newRepayAmount = await kettle.getRepaymentAmount(
-        newLien.borrowAmount,
+        newLien.amount,
         newLien.duration,
         newLien.rate
       );
@@ -313,8 +313,8 @@ describe("Kettle", () => {
       expect(newLien.collection).to.equal(lien.collection);
       expect(newLien.collateralType).to.equal(lien.collateralType);
       expect(newLien.tokenId).to.equal(lien.tokenId);
+      expect(newLien.size).to.equal(lien.size);
       expect(newLien.amount).to.equal(lien.amount);
-      expect(newLien.borrowAmount).to.equal(lien.borrowAmount);
       expect(newLien.startTime).to.equal(lien.startTime);
 
       // expect new lien to match old lien except offerHash, duration, and rate
@@ -359,7 +359,7 @@ describe("Kettle", () => {
           collateralType: CollateralType.ERC721,
           tokenId: tokenId1,
           collection: testErc721,
-          amount: 1
+          size: 1
         }
       );
 
@@ -380,13 +380,13 @@ describe("Kettle", () => {
 
       // expect repayment amounts to be different
       const oldRepayAmount = await kettle.getRepaymentAmount(
-        lien.borrowAmount,
+        lien.amount,
         lien.duration,
         lien.rate
       );
 
       const newRepayAmount = await kettle.getRepaymentAmount(
-        newLien.borrowAmount,
+        newLien.amount,
         newLien.duration,
         newLien.rate
       );
@@ -400,8 +400,8 @@ describe("Kettle", () => {
       expect(newLien.collection).to.equal(lien.collection);
       expect(newLien.collateralType).to.equal(lien.collateralType);
       expect(newLien.tokenId).to.equal(lien.tokenId);
+      expect(newLien.size).to.equal(lien.size);
       expect(newLien.amount).to.equal(lien.amount);
-      expect(newLien.borrowAmount).to.equal(lien.borrowAmount);
       expect(newLien.startTime).to.equal(lien.startTime);
 
       // expect new lien to match old lien except offerHash, duration, and rate
@@ -447,7 +447,7 @@ describe("Kettle", () => {
           collateralType: CollateralType.ERC721,
           tokenId: tokenId1,
           collection: testErc721,
-          amount: 1
+          size: 1
         }
       );
 
@@ -489,7 +489,7 @@ describe("Kettle", () => {
           collateralType: CollateralType.ERC721,
           tokenId: tokenId1,
           collection: testErc721,
-          amount: 1
+          size: 1
         }
       );
 
@@ -532,7 +532,7 @@ describe("Kettle", () => {
           collateralType: CollateralType.ERC721,
           tokenId: tokenId1,
           collection: testErc721,
-          amount: 1
+          size: 1
         }
       );
 
@@ -574,7 +574,7 @@ describe("Kettle", () => {
           collateralType: CollateralType.ERC721,
           tokenId: tokenId1,
           collection: testErc721,
-          amount: 1
+          size: 1
         }
       );
 
@@ -616,7 +616,7 @@ describe("Kettle", () => {
           collateralType: CollateralType.ERC721,
           tokenId: tokenId1,
           collection: testErc721,
-          amount: 1
+          size: 1
         }
       );
 
@@ -660,7 +660,7 @@ describe("Kettle", () => {
           collateralType: CollateralType.ERC721,
           tokenId: tokenId1,
           collection: testErc721,
-          amount: 1
+          size: 1
         }
       );
 
@@ -705,7 +705,7 @@ describe("Kettle", () => {
           collateralType: CollateralType.ERC721,
           tokenId: tokenId1,
           collection: testErc721,
-          amount: 1
+          size: 1
         }
       );
 

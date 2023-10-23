@@ -9,11 +9,12 @@ import { Signer } from "ethers";
 
 import { getFixture } from './setup';
 import { 
-  formatLien,
-  getLoanOffer,
+  prepareLoanOffer,
+  extractLien,
   signLoanOffer,
   hashCollateral,
-  signOfferAuth
+  signOfferAuth,
+  prepareLoanOfferAuth
 } from "./helpers";
 
 import { CollateralType } from '../types/loanOffer';
@@ -92,10 +93,13 @@ describe("Kettle", () => {
 
       beforeEach(async () => {
 
-        tokenOffer = await getLoanOffer({
-          collateralType: CollateralType.ERC721,
-          collateralIdentifier: tokenId1,
+        ({ offer: tokenOffer, offerSignature, offerHash } = await prepareLoanOffer(
+          kettle,
+          lender,
+          {
           lender: lender,
+          collateralType: CollateralType.ERC721,
+          identifier: tokenId1,
           collection: testErc721,
           currency: testErc20,
           totalAmount: loanAmount,
@@ -126,35 +130,21 @@ describe("Kettle", () => {
               recipient: await feeRecipient.getAddress()
             }
           ]
-        });
+        }));
 
-        offerSignature = await signLoanOffer(
-          kettle,
-          lender,
-          tokenOffer
-        );
-
-        offerHash = await kettle.getLoanOfferHash(tokenOffer);
-
-        collateralHash = await hashCollateral(
-          CollateralType.ERC721,
-          testErc721,
-          tokenId1,
-          1
-        );
-
-        offerAuth = {
-          offerHash,
-          taker: await borrower.getAddress(),
-          expiration: await time.latest() + 100,
-          collateralHash
-        }
-
-        authSignature = await signOfferAuth(
+        ({ auth: offerAuth, authSignature } = await prepareLoanOfferAuth(
           kettle,
           authSigner,
-          offerAuth
-        );
+          borrower,
+          await time.latest() + DAY_SECONDS * 7,
+          tokenOffer,
+          {
+            collateralType: CollateralType.ERC721,
+            tokenId: tokenId1,
+            collection: testErc721,
+            size: 1
+          }
+        ))
       });
 
       it('should start loan with fees', async () => {
@@ -169,30 +159,26 @@ describe("Kettle", () => {
           [],
         );
 
-        const lienLog = await txn.wait().then(
-          async (receipt) => {
-            const kettleAddres = await kettle.getAddress();
-            const lienLog = receipt!.logs!.find(
-              (log) => (log.address === kettleAddres)
-            )!;
-  
-            return  kettle.interface.decodeEventLog("LoanOfferTaken", lienLog!.data, lienLog!.topics);
-          });
+        // extract lien log
+        const lien = await txn.wait().then(
+          async (receipt) => extractLien(receipt!, kettle)
+        );
         
         expect(await testErc721.ownerOf(tokenId1)).to.equal(await erc721Escrow.getAddress());
 
         const netLoanAmount = loanAmount * BigInt(9_750) / BigInt(10_000);
-        expect(netLoanAmount).to.equal(lienLog.netBorrowAmount)
-
         expect(await testErc20.balanceOf(borrower)).to.equal(netLoanAmount);
         expect(await testErc20.balanceOf(feeRecipient)).to.equal(loanAmount - netLoanAmount)
       });
 
       it('should start loans in bulk with fees', async () => {
-        const tokenOffer2 = await getLoanOffer({
-          collateralType: CollateralType.ERC721,
-          collateralIdentifier: tokenId2,
+        const { offer: tokenOffer2, offerSignature: offerSignature2 } = await prepareLoanOffer(
+          kettle,
+          lender,
+          {
           lender: lender,
+          collateralType: CollateralType.ERC721,
+          identifier: tokenId2,
           collection: testErc721,
           currency: testErc20,
           totalAmount: loanAmount,
@@ -207,32 +193,18 @@ describe("Kettle", () => {
           }]
         });
 
-        const offerSignature2 = await signLoanOffer(
-          kettle,
-          lender,
-          tokenOffer2
-        );
-
-        const offerHash2 = await kettle.getLoanOfferHash(tokenOffer2);
-
-        const collateralHash2 = await hashCollateral(
-          CollateralType.ERC721,
-          testErc721,
-          tokenId2,
-          1
-        );
-
-        const offerAuth2 = {
-          offerHash: offerHash2,
-          taker: await borrower.getAddress(),
-          expiration: await time.latest() + 100,
-          collateralHash: collateralHash2
-        }
-
-        const authSignature2 = await signOfferAuth(
+        const { auth: offerAuth2, authSignature: authSignature2 } = await prepareLoanOfferAuth(
           kettle,
           authSigner,
-          offerAuth2
+          borrower,
+          await time.latest() + DAY_SECONDS * 7,
+          tokenOffer2,
+          {
+            collateralType: CollateralType.ERC721,
+            tokenId: tokenId2,
+            collection: testErc721,
+            size: 1
+          }
         );
 
         await kettle.connect(borrower).borrowBatch(
@@ -249,16 +221,16 @@ describe("Kettle", () => {
           [
             {
               offerIndex: 0,
-              loanAmount: ethers.parseEther("5"),
-              collateralIdentifier: 1,
+              amount: ethers.parseEther("5"),
+              tokenId: 1,
               proof: [],
               auth: offerAuth,
               authSignature: authSignature
             },
             {
               offerIndex: 1,
-              loanAmount: ethers.parseEther("5"),
-              collateralIdentifier: 2,
+              amount: ethers.parseEther("5"),
+              tokenId: 2,
               proof: [],
               auth: offerAuth2,
               authSignature: authSignature2
@@ -277,10 +249,13 @@ describe("Kettle", () => {
       });
 
       it('should revert if fees are too high', async () => {
-        const tokenOffer2 = await getLoanOffer({
-          collateralType: CollateralType.ERC721,
-          collateralIdentifier: tokenId2,
+        const { offer: tokenOffer2, offerSignature: offerSignature2 } = await prepareLoanOffer(
+          kettle,
+          lender,
+          {
           lender: lender,
+          collateralType: CollateralType.ERC721,
+          identifier: tokenId2,
           collection: testErc721,
           currency: testErc20,
           totalAmount: loanAmount,
@@ -301,32 +276,18 @@ describe("Kettle", () => {
         ]
         });
 
-        const offerSignature2 = await signLoanOffer(
-          kettle,
-          lender,
-          tokenOffer2
-        );
-
-        const offerHash2 = await kettle.getLoanOfferHash(tokenOffer2);
-
-        const collateralHash2 = await hashCollateral(
-          CollateralType.ERC721,
-          testErc721,
-          tokenId2,
-          1
-        );
-
-        const offerAuth2 = {
-          offerHash: offerHash2,
-          taker: await borrower.getAddress(),
-          expiration: await time.latest() + 100,
-          collateralHash: collateralHash2
-        }
-
-        const authSignature2 = await signOfferAuth(
+        const { auth: offerAuth2, authSignature: authSignature2 } = await prepareLoanOfferAuth(
           kettle,
           authSigner,
-          offerAuth2
+          borrower,
+          await time.latest() + DAY_SECONDS * 7,
+          tokenOffer2,
+          {
+            collateralType: CollateralType.ERC721,
+            tokenId: tokenId2,
+            collection: testErc721,
+            size: 1
+          }
         );
 
         await expect(kettle.connect(borrower).borrow(
