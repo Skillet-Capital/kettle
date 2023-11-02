@@ -78,6 +78,11 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
 
         totalFees = 0;
         for (uint256 i = 0; i < fees.length; i++) {
+            // skip if fee rate is 0
+            if (fees[i].rate == 0) {
+                continue;
+            }
+
             uint256 feeAmount = Helpers.computeFeeAmount(
                 amount,
                 fees[i].rate
@@ -586,15 +591,6 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
         // initialize offer hash
         bytes32 offerHash = _hashLoanOffer(offer);
 
-        // If the offer hashes are the same, we need to update the start time for refinances
-        // this allows for early repayments with rollovers without penalizing borrower
-        // based on the time of early repayment 
-        // e.g. start sept 1, pay on sept 20, next payment due nov 1
-        uint256 diff = 0;
-        if (offerHash == lien.offerHash) {
-            diff = lien.startTime + lien.duration - block.timestamp;
-        }
-
         /* Update lien with new loan details. */
         Lien memory newLien = Lien({
             offerHash: offerHash,
@@ -606,7 +602,7 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
             size: lien.size,
             currency: lien.currency,
             amount: amount,
-            startTime: block.timestamp + diff,
+            startTime: block.timestamp,
             duration: offer.duration,
             rate: offer.rate
         });
