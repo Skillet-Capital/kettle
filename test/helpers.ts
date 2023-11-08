@@ -174,7 +174,7 @@ export async function signLoanOffer(
 ) {
   const domain = {
     name: 'Kettle',
-    version: '1',
+    version: '2',
     chainId: 1,
     verifyingContract: await kettle.getAddress()
   }
@@ -215,7 +215,7 @@ export async function signBorrowOffer(
 ) {
   const domain = {
     name: 'Kettle',
-    version: '1',
+    version: '2',
     chainId: 1,
     verifyingContract: await kettle.getAddress()
   }
@@ -254,7 +254,7 @@ export async function signRenegotiationOffer(
 ) {
   const domain = {
     name: 'Kettle',
-    version: '1',
+    version: '2',
     chainId: 1,
     verifyingContract: await kettle.getAddress()
   }
@@ -312,7 +312,7 @@ export async function signOfferAuth(
 ) {
   const domain = {
     name: 'Kettle',
-    version: '1',
+    version: '2',
     chainId: 1,
     verifyingContract: await kettle.getAddress()
   }
