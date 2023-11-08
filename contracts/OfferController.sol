@@ -15,7 +15,7 @@ contract OfferController is IOfferController, Ownable, Signatures {
     uint256 private constant _LIQUIDATION_THRESHOLD = 10_000_000;
 
     mapping(address => mapping(uint256 => uint256)) public cancelledOrFulfilled;
-    mapping(bytes32 => uint256) public _amountTaken;
+    mapping(bytes32 => uint256) private _amountTaken;
     address public _AUTH_SIGNER;
     uint256[50] private _gap;
 

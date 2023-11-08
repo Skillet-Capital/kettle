@@ -15,7 +15,7 @@ abstract contract Signatures is ISignatures {
     bytes32 private immutable _EIP_712_DOMAIN_TYPEHASH;
 
     string private constant _NAME = "Kettle";
-    string private constant _VERSION = "1";
+    string private constant _VERSION = "2";
 
     mapping(address => uint256) public nonces;
     uint256[50] private _gap;
