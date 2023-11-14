@@ -9,12 +9,13 @@ import { Helpers } from "./Helpers.sol";
 import { CollateralVerifier } from "./CollateralVerifier.sol";
 import { SafeTransfer } from "./SafeTransfer.sol";
 
+import { Signatures } from "./lib/Signatures.sol";
 import { OfferController } from "./OfferController.sol";
 import { IKettle } from "./interfaces/IKettle.sol";
 
-import { CollateralType, Fee, Lien, LoanOffer, BorrowOffer, LoanOfferInput, BorrowOfferInput, LienPointer, LoanFullfillment, BorrowFullfillment, RepayFullfillment, RefinanceFullfillment, OfferAuth } from "./lib/Structs.sol";
+import { CollateralType, Fee, Lien, LoanOffer, BorrowOffer, RenegotiationOffer, LoanOfferInput, BorrowOfferInput, LienPointer, LoanFullfillment, BorrowFullfillment, RepayFullfillment, RefinanceFullfillment, OfferAuth } from "./lib/Structs.sol";
 
-import { InvalidLien, Unauthorized, LienIsDefaulted, LienNotDefaulted, CollectionsDoNotMatch, CurrenciesDoNotMatch, NoEscrowImplementation, InvalidCollateralAmount, InvalidCollateralType, TotalFeeTooHigh } from "./lib/Errors.sol";
+import { InvalidLien, Unauthorized, LienIsDefaulted, LienNotDefaulted, CollectionsDoNotMatch, CurrenciesDoNotMatch, NoEscrowImplementation, InvalidCollateralSize, InvalidCollateralType, TotalFeeTooHigh, InvalidLienHash, LienIdMismatch, InvalidDuration, LendersDoNotMatch } from "./lib/Errors.sol";
 
 /**
  *  _        _   _   _      
@@ -30,13 +31,12 @@ import { InvalidLien, Unauthorized, LienIsDefaulted, LienNotDefaulted, Collectio
  * @notice Kettle is a lending protocol that allows users to borrow against any tokenized asset
  */
 
-contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder, ERC1155Holder {
-    uint256 private constant _BASIS_POINTS = 10_000;
-    uint256 private constant _LIQUIDATION_THRESHOLD = 100_000;
+contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, ERC721Holder, ERC1155Holder {
     uint256 private _nextLienId;
 
     mapping(uint256 => bytes32) public liens;
     mapping(address => address) public escrows;
+    mapping(bytes32 => uint256) private _gracePeriod;
 
     constructor(address authSigner) OfferController(authSigner) { }
 
@@ -60,11 +60,19 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
         }
     }
 
+    function getGracePeriodForLien(uint256 lienId) public view returns (uint256 duration) {
+        duration = _gracePeriod[liens[lienId]];
+    }
+
     /*//////////////////////////////////////////////////
                        SETTERS
     //////////////////////////////////////////////////*/
     function setEscrow(address collection, address escrow) external onlyOwner {
         escrows[collection] = escrow;
+    }
+
+    function setGracePeriodForLien(uint256 lienId, uint256 duration) external onlyOwner {
+        _gracePeriod[liens[lienId]] = duration;
     }
 
     /*//////////////////////////////////////////////////
@@ -73,14 +81,19 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
     function payFees(
         address currency,
         address lender,
-        uint256 loanAmount,
+        uint256 amount,
         Fee[] calldata fees
     ) internal returns (uint256 totalFees) {
 
         totalFees = 0;
         for (uint256 i = 0; i < fees.length; i++) {
+            // skip if fee rate is 0
+            if (fees[i].rate == 0) {
+                continue;
+            }
+
             uint256 feeAmount = Helpers.computeFeeAmount(
-                loanAmount,
+                amount,
                 fees[i].rate
             );
 
@@ -97,7 +110,7 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
         }
 
         // revert if total fees are more than loan amount (over 100% fees)
-        if (totalFees >= loanAmount) {
+        if (totalFees >= amount) {
             revert TotalFeeTooHigh();
         }
     }
@@ -130,8 +143,8 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
                 fullfillment.auth,
                 offer.offerSignature,
                 fullfillment.authSignature,
-                fullfillment.loanAmount,
-                fullfillment.collateralIdentifier,
+                fullfillment.amount,
+                fullfillment.tokenId,
                 borrower,
                 fullfillment.proof
             );
@@ -144,8 +157,8 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
      * @param auth Offer auth
      * @param offerSignature Lender offer signature
      * @param authSignature Auth signer signature
-     * @param loanAmount Loan amount in ETH
-     * @param collateralTokenId Token id to provide as collateral
+     * @param amount Loan amount in ETH
+     * @param tokenId Token id to provide as collateral
      * @param borrower address of borrower
      * @param proof proof for criteria offer
      * @return lienId New lien id
@@ -155,8 +168,8 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
         OfferAuth calldata auth,
         bytes calldata offerSignature,
         bytes calldata authSignature,
-        uint256 loanAmount,
-        uint256 collateralTokenId,
+        uint256 amount,
+        uint256 tokenId,
         address borrower,
         bytes32[] calldata proof
     ) public returns (uint256 lienId) {
@@ -166,8 +179,8 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
 
         CollateralVerifier.verifyCollateral(
             offer.collateralType,
-            offer.collateralIdentifier,
-            collateralTokenId,
+            offer.identifier,
+            tokenId,
             proof
         );
 
@@ -176,8 +189,8 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
             auth,
             offerSignature,
             authSignature,
-            loanAmount,
-            collateralTokenId,
+            amount,
+            tokenId,
             borrower
         );
 
@@ -186,15 +199,15 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
             offer.collection, 
             msg.sender, 
             getEscrow(offer.collection), 
-            collateralTokenId, 
-            offer.collateralAmount
+            tokenId, 
+            offer.size
         );
 
         /* Transfer fees from lender */
         uint256 totalFees = payFees(
             offer.currency,
             offer.lender,
-            loanAmount,
+            amount,
             offer.fees
         );
 
@@ -204,7 +217,7 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
                 offer.currency, 
                 offer.lender,
                 borrower, 
-                loanAmount - totalFees
+                amount - totalFees
             );
         }
     }
@@ -215,8 +228,8 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
      * @param auth Offer auth
      * @param offerSignature Lender offer signature
      * @param authSignature Auth signer signature
-     * @param loanAmount Loan amount in ETH
-     * @param collateralTokenId Token id to provide as collateral
+     * @param amount Loan amount in ETH
+     * @param tokenId Token id to provide as collateral
      * @param borrower address of borrower (optional)
      * @return lienId New lien id
      */
@@ -225,19 +238,22 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
         OfferAuth calldata auth,
         bytes calldata offerSignature,
         bytes calldata authSignature,
-        uint256 loanAmount,
-        uint256 collateralTokenId,
+        uint256 amount,
+        uint256 tokenId,
         address borrower
     ) internal returns (uint256 lienId) {
+        bytes32 offerHash = _hashLoanOffer(offer);
+
         Lien memory lien = Lien({
+            offerHash: offerHash,
             lender: offer.lender,
             borrower: borrower,
             collateralType: CollateralVerifier.mapCollateralType(offer.collateralType),
             collection: offer.collection,
-            amount: offer.collateralAmount,
-            tokenId: collateralTokenId,
+            tokenId: tokenId,
+            size: offer.size,
             currency: offer.currency,
-            borrowAmount: loanAmount,
+            amount: amount,
             startTime: block.timestamp,
             duration: offer.duration,
             rate: offer.rate
@@ -308,25 +324,25 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
             offer.collection,
             offer.borrower,
             getEscrow(offer.collection),
-            offer.collateralIdentifier,
-            offer.collateralAmount
+            offer.tokenId,
+            offer.size
         );
 
         /* Transfer fees from lender */
         uint256 totalFees = payFees(
             offer.currency,
             msg.sender,
-            offer.loanAmount,
+            offer.amount,
             offer.fees
         );
 
         /* Transfer loan amount to borrower. */
         unchecked {
             SafeTransfer.transferERC20(
-                offer.currency, 
-                msg.sender, 
-                offer.borrower, 
-                offer.loanAmount - totalFees
+                offer.currency,
+                msg.sender,
+                offer.borrower,
+                offer.amount - totalFees
             );
         }
     }
@@ -345,15 +361,18 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
         bytes calldata offerSignature,
         bytes calldata authSignature
     ) internal returns (uint256 lienId) {
+        bytes32 offerHash = _hashBorrowOffer(offer);
+
         Lien memory lien = Lien({
+            offerHash: offerHash,
             lender: msg.sender,
             borrower: offer.borrower,
             collateralType: CollateralVerifier.mapCollateralType(offer.collateralType),
             collection: offer.collection,
-            amount: offer.collateralAmount,
-            tokenId: offer.collateralIdentifier,
+            tokenId: offer.tokenId,
+            size: offer.size,
             currency: offer.currency,
-            borrowAmount: offer.loanAmount,
+            amount: offer.amount,
             startTime: block.timestamp,
             duration: offer.duration,
             rate: offer.rate
@@ -402,7 +421,7 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
             getEscrow(lien.collection),
             lien.borrower,
             lien.tokenId,
-            lien.amount
+            lien.size
         );
 
         SafeTransfer.transferERC20(
@@ -425,14 +444,24 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
         uint256 lienId
     ) internal returns (uint256 repayAmount) {
         repayAmount = getRepaymentAmount(
-            lien.borrowAmount,
+            lien.amount,
             lien.rate,
             lien.duration
         );
 
+        delete _gracePeriod[liens[lienId]];
         delete liens[lienId];
 
-        emit Repay(lienId, lien.collection, repayAmount);
+        emit Repay(
+            lienId, 
+            lien.collection,
+            lien.startTime,
+            block.timestamp,
+            lien.amount,
+            lien.rate,
+            lien.duration,
+            repayAmount
+        );
     }
 
     /*//////////////////////////////////////////////////
@@ -455,7 +484,7 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
             refinance(
                 fullfillment.lien,
                 fullfillment.lienId,
-                fullfillment.loanAmount,
+                fullfillment.amount,
                 offer.offer,
                 fullfillment.auth,
                 offer.offerSignature,
@@ -469,7 +498,7 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
      * @notice Refinance and existing lien with new loan offer
      * @param lien Existing lien
      * @param lienId Identifier of existing lien
-     * @param loanAmount Loan amount in ETH
+     * @param amount Loan amount in ETH
      * @param offer Loan offer
      * @param auth Offer auth
      * @param offerSignature Lender offer signature
@@ -479,13 +508,15 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
     function refinance(
         Lien calldata lien,
         uint256 lienId,
-        uint256 loanAmount,
+        uint256 amount,
         LoanOffer calldata offer,
         OfferAuth calldata auth,
         bytes calldata offerSignature,
         bytes calldata authSignature,
         bytes32[] calldata proof
     ) public validateLien(lien, lienId) lienIsActive(lien) {
+
+        // caller must be borrower
         if (msg.sender != lien.borrower) {
             revert Unauthorized();
         }
@@ -498,42 +529,46 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
          */
         CollateralVerifier.verifyCollateral(
             offer.collateralType,
-            offer.collateralIdentifier,
+            offer.identifier,
             lien.tokenId,
             proof
         );
 
         /* Refinance initial loan to new loan (loanAmount must be within lender range) */
-        _refinance(lien, lienId, loanAmount, offer, auth, offerSignature, authSignature);
+        _refinance(lien, lienId, amount, offer, auth, offerSignature, authSignature);
 
         uint256 repayAmount = getRepaymentAmount(
-            lien.borrowAmount,
+            lien.amount,
             lien.rate,
             lien.duration
         );
 
-        /* Transfer fees */
-        uint256 totalFees = payFees(
+        /* Transfer fees 
+         * Caller of method must pay fees in order to refinance offer
+         * Fees are calculated based on the new loan amount
+         */
+        payFees(
             offer.currency,
-            offer.lender,
-            loanAmount,
+            msg.sender,
+            amount,
             offer.fees
         );
-        unchecked {
-            loanAmount -= totalFees;
-        }
 
-        if (loanAmount >= repayAmount) {
+        if (amount >= repayAmount) {
             /* If new loan is more than the previous, repay the initial loan and send the remaining to the borrower. */
-            SafeTransfer.transferERC20(offer.currency, offer.lender, lien.lender, repayAmount);
+            if (offer.lender != lien.lender) {
+                SafeTransfer.transferERC20(offer.currency, offer.lender, lien.lender, repayAmount);
+            }
             unchecked {
-                SafeTransfer.transferERC20(offer.currency, offer.lender, lien.borrower, loanAmount - repayAmount);
+                SafeTransfer.transferERC20(offer.currency, offer.lender, lien.borrower, amount - repayAmount);
             }
         } else {
             /* If new loan is less than the previous, borrower must supply the difference to repay the initial loan. */
-            SafeTransfer.transferERC20(offer.currency, offer.lender, lien.lender, loanAmount);
+            if (offer.lender != lien.lender) {
+                SafeTransfer.transferERC20(offer.currency, offer.lender, lien.lender, amount);
+            }
             unchecked {
-                SafeTransfer.transferERC20(offer.currency, lien.borrower, lien.lender, repayAmount - loanAmount);
+                SafeTransfer.transferERC20(offer.currency, lien.borrower, lien.lender, repayAmount - amount);
             }
         }
     }
@@ -541,7 +576,7 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
     function _refinance(
         Lien calldata lien,
         uint256 lienId,
-        uint256 loanAmount,
+        uint256 amount,
         LoanOffer calldata offer,
         OfferAuth calldata auth,
         bytes calldata offerSignature,
@@ -555,24 +590,28 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
             revert CurrenciesDoNotMatch();
         }
 
-        if (lien.amount != offer.collateralAmount) {
-            revert InvalidCollateralAmount();
+        if (lien.size != offer.size) {
+            revert InvalidCollateralSize();
         }
 
         if (lien.collateralType != CollateralVerifier.mapCollateralType(offer.collateralType)) {
             revert InvalidCollateralType();
         }
 
+        // initialize offer hash
+        bytes32 offerHash = _hashLoanOffer(offer);
+
         /* Update lien with new loan details. */
         Lien memory newLien = Lien({
+            offerHash: offerHash,
             lender: offer.lender,
             borrower: lien.borrower,
             collateralType: lien.collateralType,
             collection: lien.collection,
-            amount: lien.amount,
             tokenId: lien.tokenId,
+            size: lien.size,
             currency: lien.currency,
-            borrowAmount: loanAmount,
+            amount: amount,
             startTime: block.timestamp,
             duration: offer.duration,
             rate: offer.rate
@@ -587,15 +626,113 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
 
         emit Refinance(
             lienId,
-            offer.collection,
-            offer.currency,
-            lien.amount,
             lien.lender,
             newLien.lender,
-            lien.borrowAmount,
-            newLien.borrowAmount,
+            lien.amount,
+            newLien.amount,
+            lien.duration,
+            newLien.duration,
             lien.rate,
             newLien.rate
+        );
+    }
+
+    /*//////////////////////////////////////////////////
+                    RENEGOTIATE FLOWS
+    //////////////////////////////////////////////////*/
+
+    function renegotiate(
+        Lien calldata lien,
+        uint256 lienId,
+        RenegotiationOffer calldata offer,
+        OfferAuth calldata auth,
+        bytes calldata offerSignature,
+        bytes calldata authSignature
+    ) public validateLien(lien, lienId) lienIsActive(lien) {
+
+        // caller must be borrower
+        if (msg.sender != lien.borrower) {
+            revert Unauthorized();
+        }
+
+        // borrower pays fees on original borrow amount and offer specified rate
+        payFees(
+            lien.currency, 
+            msg.sender, 
+            lien.amount, 
+            offer.fees
+        );
+
+        // renegotiate initial loan to new loan
+        _renegotiate(lien, lienId, offer, auth, offerSignature, authSignature);
+    }
+
+    function _renegotiate(
+        Lien calldata lien,
+        uint256 lienId,
+        RenegotiationOffer calldata offer,
+        OfferAuth calldata auth,
+        bytes calldata offerSignature,
+        bytes calldata authSignature
+    ) internal {
+
+        // current lender must be the renegotiation lender
+        if (lien.lender != offer.lender) {
+            revert LendersDoNotMatch();
+        }
+
+        // signed lien id must match provided lien id
+        if (lienId != offer.lienId) {
+            revert LienIdMismatch();
+        }
+        
+        // signed lien hash must match stored lien hash
+        // protects against renegotation after subsequent update to lien
+        // if provided lien hash is 0, pass through (allows for renegoitation once per lien)
+        if (offer.lienHash != bytes32(0)) {
+            bytes32 _lienHash = liens[lienId];
+            if (_lienHash != offer.lienHash) {
+                revert InvalidLienHash();
+            }
+        }
+
+        // updated duration must end after current block timestamp
+        if (lien.startTime + offer.newDuration < block.timestamp) {
+            revert InvalidDuration();
+        }
+
+        // initialize offer hash
+        bytes32 offerHash = _hashRenegotiationOffer(offer);
+
+        /* Update lien with new loan details. */
+        Lien memory newLien = Lien({
+            offerHash: offerHash,
+            lender: lien.lender,
+            borrower: lien.borrower,
+            collateralType: lien.collateralType,
+            collection: lien.collection,
+            tokenId: lien.tokenId,
+            size: lien.size,
+            currency: lien.currency,
+            amount: lien.amount,
+            startTime: lien.startTime,
+            duration: offer.newDuration,
+            rate: offer.newRate
+        });
+
+        unchecked {
+            liens[lienId] = keccak256(abi.encode(newLien));
+        }
+
+        /* Take the renegotiation offer. */
+        _takeRenegotiationOffer(offer, auth, offerSignature, authSignature, newLien, lienId);
+
+        emit Renegotiate(
+            lienId,
+            lien.rate,
+            newLien.rate,
+            lien.duration,
+            newLien.duration
         );
     }
 
@@ -627,6 +764,7 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
             }
 
             /* Check that the auction has ended and lien is defaulted. */
+            delete _gracePeriod[liens[lienId]];
             delete liens[lienId];
 
             /* Seize collateral to lender. */
@@ -635,8 +773,8 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
                 lien.collection, 
                 getEscrow(lien.collection), 
                 lien.lender, 
-                lien.tokenId, 
-                lien.amount
+                lien.tokenId,
+                lien.size
             );
 
             emit Seize(lienId, lien.collection);
@@ -710,6 +848,7 @@ contract Kettle is IKettle, Ownable, OfferController, SafeTransfer, ERC721Holder
     }
 
     function _lienIsDefaulted(Lien calldata lien) internal view returns (bool) {
-        return lien.startTime + lien.duration < block.timestamp;
+        bytes32 lienHash = keccak256(abi.encode(lien));
+        return lien.startTime + lien.duration + _gracePeriod[lienHash] < block.timestamp;
     }
 }

@@ -7,11 +7,11 @@ import { CollateralType, Fee } from "./lib/Structs.sol";
 
 library Helpers {
     int256 private constant _YEAR_WAD = 365 days * 1e18;
-    uint256 private constant _LIQUIDATION_THRESHOLD = 100_000;
-    uint256 private constant _BASIS_POINTS = 10_000;
+    uint256 private constant _LIQUIDATION_THRESHOLD = 10_000_000;
+    uint256 private constant _MILLI_BASIS_POINTS = 1_000_000;
 
     function bipsToSignedWads(uint256 bips) public pure returns (int256) {
-        return int256((bips * 1e18) / _BASIS_POINTS);
+        return int256((bips * 1e18) / _MILLI_BASIS_POINTS);
     }
 
     function computeCurrentDebt(
@@ -40,8 +40,8 @@ library Helpers {
 
     function computeFeeAmount(
         uint256 amount,
-        uint16 rate
+        uint256 rate
     ) public pure returns (uint256) {
-        return ((amount * rate) + _BASIS_POINTS - 1) / _BASIS_POINTS;
+        return ((amount * rate) + _MILLI_BASIS_POINTS - 1) / _MILLI_BASIS_POINTS;
     }
 }

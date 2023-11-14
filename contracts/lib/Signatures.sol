@@ -1,20 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import { Fee, LoanOffer, BorrowOffer, OfferAuth, Collateral } from "./Structs.sol";
+import { Fee, LoanOffer, BorrowOffer, OfferAuth, Collateral, RenegotiationOffer } from "./Structs.sol";
 import { InvalidVParameter, InvalidSignature } from "./Errors.sol";
 import { ISignatures } from "../interfaces/ISignatures.sol";
 
 abstract contract Signatures is ISignatures {
     bytes32 private immutable _LOAN_OFFER_TYPEHASH;
     bytes32 private immutable _BORROW_OFFER_TYPEHASH;
+    bytes32 private immutable _RENEGOTIATION_OFFER_TYPEHASH;
     bytes32 private immutable _COLLATERAL_TYPEHASH;
     bytes32 private immutable _OFFER_AUTH_TYPEHASH;
     bytes32 private immutable _FEE_TYPEHASH;
     bytes32 private immutable _EIP_712_DOMAIN_TYPEHASH;
 
     string private constant _NAME = "Kettle";
-    string private constant _VERSION = "1";
+    string private constant _VERSION = "2";
 
     mapping(address => uint256) public nonces;
     uint256[50] private _gap;
@@ -23,6 +24,7 @@ abstract contract Signatures is ISignatures {
         (
             _LOAN_OFFER_TYPEHASH,
             _BORROW_OFFER_TYPEHASH,
+            _RENEGOTIATION_OFFER_TYPEHASH,
             _FEE_TYPEHASH,
             _COLLATERAL_TYPEHASH,
             _OFFER_AUTH_TYPEHASH,
@@ -55,6 +57,12 @@ abstract contract Signatures is ISignatures {
         return _hashBorrowOffer(offer);
     }
 
+    function getRenegotiationOfferHash(
+        RenegotiationOffer calldata offer
+    ) external view returns (bytes32) {
+        return _hashRenegotiationOffer(offer);
+    }
+
     /**
      * @notice Generate all EIP712 Typehashes
      */
@@ -64,6 +72,7 @@ abstract contract Signatures is ISignatures {
         returns (
             bytes32 loanOfferTypehash,
             bytes32 borrowOfferTypehash,
+            bytes32 renegotiationOfferTypehash,
             bytes32 feeTypehash,
             bytes32 collateralTypehash,
             bytes32 offerAuthTypehash,
@@ -83,7 +92,7 @@ abstract contract Signatures is ISignatures {
 
         bytes memory feeTypestring = bytes.concat(
             "Fee(",
-            "uint16 rate,",
+            "uint256 rate,",
             "address recipient"
             ")"
         );
@@ -93,10 +102,10 @@ abstract contract Signatures is ISignatures {
         loanOfferTypehash = keccak256(
             bytes.concat(
                 "LoanOffer(",
-                "address collection,",
                 "uint8 collateralType,",
-                "uint256 collateralIdentifier,",
-                "uint256 collateralAmount,",
+                "address collection,",
+                "uint256 identifier,",
+                "uint256 size,",
                 "address currency,",
                 "uint256 totalAmount,",
                 "uint256 minAmount,",
@@ -115,16 +124,32 @@ abstract contract Signatures is ISignatures {
         borrowOfferTypehash = keccak256(
             bytes.concat(
                 "BorrowOffer(",
-                "address collection,",
                 "uint8 collateralType,",
-                "uint256 collateralIdentifier,",
-                "uint256 collateralAmount,",
+                "address collection,",
+                "uint256 tokenId,",
+                "uint256 size,",
                 "address currency,",
-                "uint256 loanAmount,",
+                "uint256 amount,",
                 "uint256 duration,",
                 "uint256 rate,",
                 "uint256 salt,",
                 "uint256 expiration,",
+                "uint256 nonce,",
+                "Fee[] fees",
+                ")",
+                feeTypestring
+            )
+        );
+
+        renegotiationOfferTypehash = keccak256(
+            bytes.concat(
+                "RenegotiationOffer(",
+                "uint256 lienId,",
+                "bytes32 lienHash,",
+                "uint256 newDuration,",
+                "uint256 newRate,",
+                "uint256 expiration,",
+                "uint256 salt,",
                 "uint256 nonce,",
                 "Fee[] fees",
                 ")",
@@ -137,8 +162,8 @@ abstract contract Signatures is ISignatures {
                 "Collateral(",
                 "uint8 collateralType,",
                 "address collection,",
-                "uint256 collateralId,",
-                "uint256 collateralAmount"
+                "uint256 tokenId,",
+                "uint256 size"
                 ")"
             )
         );
@@ -195,10 +220,10 @@ abstract contract Signatures is ISignatures {
             keccak256(
                 abi.encode(
                     _LOAN_OFFER_TYPEHASH,
-                    offer.collection,
                     offer.collateralType,
-                    offer.collateralIdentifier,
-                    offer.collateralAmount,
+                    offer.collection,
+                    offer.identifier,
+                    offer.size,
                     offer.currency,
                     offer.totalAmount,
                     offer.minAmount,
@@ -220,12 +245,12 @@ abstract contract Signatures is ISignatures {
             keccak256(
                 abi.encode(
                     _BORROW_OFFER_TYPEHASH,
-                    offer.collection,
                     offer.collateralType,
-                    offer.collateralIdentifier,
-                    offer.collateralAmount,
+                    offer.collection,
+                    offer.tokenId,
+                    offer.size,
                     offer.currency,
-                    offer.loanAmount,
+                    offer.amount,
                     offer.duration,
                     offer.rate,
                     offer.salt,
@@ -236,11 +261,30 @@ abstract contract Signatures is ISignatures {
             );
     }
 
+    function _hashRenegotiationOffer(
+        RenegotiationOffer calldata offer
+    ) internal view returns (bytes32) {
+        return 
+            keccak256(
+                abi.encode(
+                    _RENEGOTIATION_OFFER_TYPEHASH,
+                    offer.lienId,
+                    offer.lienHash,
+                    offer.newDuration,
+                    offer.newRate,
+                    offer.expiration,
+                    offer.salt,
+                    nonces[offer.lender],
+                    _packFees(offer.fees)
+                )
+            );
+    }
+
     function _hashCollateral(
         uint8 collateralType,
         address collection,
-        uint256 collateralId,
-        uint256 collateralAmount
+        uint256 tokenId,
+        uint256 size
     ) internal view returns (bytes32) {
         return 
             keccak256(
@@ -248,8 +292,8 @@ abstract contract Signatures is ISignatures {
                     _COLLATERAL_TYPEHASH, 
                     collateralType, 
                     collection,
-                    collateralId,
-                    collateralAmount
+                    tokenId,
+                    size
                 )
             );
     }

@@ -6,13 +6,13 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Helpers } from "./Helpers.sol";
 
 import { IOfferController } from "./interfaces/IOfferController.sol";
-import { Lien, LoanOffer, BorrowOffer, OfferAuth, Collateral } from "./lib/Structs.sol";
+import { Lien, LoanOffer, BorrowOffer, RenegotiationOffer, OfferAuth, Collateral } from "./lib/Structs.sol";
 import { Signatures } from "./lib/Signatures.sol";
 
 import { InvalidLoanAmount, InsufficientOffer, RateTooHigh, OfferExpired, OfferUnavailable, UnauthorizedOffer, UnauthorizedCollateral, UnauthorizedTaker, AuthorizationExpired } from "./lib/Errors.sol";
 
 contract OfferController is IOfferController, Ownable, Signatures {
-    uint256 private constant _LIQUIDATION_THRESHOLD = 100_000;
+    uint256 private constant _LIQUIDATION_THRESHOLD = 10_000_000;
 
     mapping(address => mapping(uint256 => uint256)) public cancelledOrFulfilled;
     mapping(bytes32 => uint256) private _amountTaken;
@@ -49,10 +49,9 @@ contract OfferController is IOfferController, Ownable, Signatures {
         Lien memory lien,
         uint256 lienId
     ) internal {
-        bytes32 hash = _hashLoanOffer(offer);
 
         _validateOffer(
-            hash,
+            lien.offerHash,
             offer.lender,
             offerSignature,
             offer.expiration,
@@ -60,7 +59,7 @@ contract OfferController is IOfferController, Ownable, Signatures {
         );
 
         _validateAuth(
-            hash, 
+            lien.offerHash, 
             msg.sender, 
             auth, 
             lien, 
@@ -71,40 +70,35 @@ contract OfferController is IOfferController, Ownable, Signatures {
             revert RateTooHigh();
         }
         if (
-            lien.borrowAmount > offer.maxAmount ||
-            lien.borrowAmount < offer.minAmount
+            lien.amount > offer.maxAmount ||
+            lien.amount < offer.minAmount
         ) {
             revert InvalidLoanAmount();
         }
-        uint256 __amountTaken = _amountTaken[hash];
-        if (offer.totalAmount - __amountTaken < lien.borrowAmount) {
+        uint256 __amountTaken = _amountTaken[lien.offerHash];
+        if (offer.totalAmount - __amountTaken < lien.amount) {
             revert InsufficientOffer();
         }
 
         unchecked {
-            _amountTaken[hash] = __amountTaken + lien.borrowAmount;
+            _amountTaken[lien.offerHash] = __amountTaken + lien.amount;
         }
 
-        uint256 netBorrowAmount = Helpers.computeAmountAfterFees(
-            lien.borrowAmount,
-            offer.fees
-        );
-
-        emit LoanOfferTaken(
-            hash,
+        emit Loan(
+            lien.offerHash,
             lienId,
             lien.lender,
             lien.borrower,
-            lien.currency,
             lien.collateralType,
             lien.collection,
             lien.tokenId,
+            lien.size,
+            lien.currency,
             lien.amount,
-            lien.borrowAmount,
-            netBorrowAmount,
             lien.rate,
             lien.duration,
-            block.timestamp
+            lien.startTime,
+            offer.fees
         );
     }
 
@@ -126,10 +120,9 @@ contract OfferController is IOfferController, Ownable, Signatures {
         Lien memory lien,
         uint256 lienId
     ) internal {
-        bytes32 hash = _hashBorrowOffer(offer);
 
         _validateOffer(
-            hash,
+            lien.offerHash,
             offer.borrower,
             offerSignature,
             offer.expiration,
@@ -137,7 +130,7 @@ contract OfferController is IOfferController, Ownable, Signatures {
         );
 
         _validateAuth(
-            hash, 
+            lien.offerHash, 
             msg.sender, 
             auth,
             lien, 
@@ -150,26 +143,70 @@ contract OfferController is IOfferController, Ownable, Signatures {
 
         cancelledOrFulfilled[offer.borrower][offer.salt] = 1;
 
-        uint256 netBorrowAmount = Helpers.computeAmountAfterFees(
-            lien.borrowAmount,
-            offer.fees
-        );
-
-        emit LoanOfferTaken(
-            hash,
+        emit Loan(
+            lien.offerHash,
             lienId,
             lien.lender,
             lien.borrower,
-            lien.currency,
             lien.collateralType,
             lien.collection,
             lien.tokenId,
+            lien.size,
+            lien.currency,
             lien.amount,
-            lien.borrowAmount,
-            netBorrowAmount,
             lien.rate,
             lien.duration,
-            block.timestamp
+            lien.startTime,
+            offer.fees
+        );
+    }
+
+    function _takeRenegotiationOffer(
+        RenegotiationOffer calldata offer,
+        OfferAuth calldata auth,
+        bytes calldata offerSignature,
+        bytes calldata authSignature,
+        Lien memory lien,
+        uint256 lienId
+    ) internal {
+
+        _validateOffer(
+            lien.offerHash,
+            offer.lender,
+            offerSignature,
+            offer.expiration,
+            offer.salt
+        );
+
+        _validateAuth(
+            lien.offerHash, 
+            msg.sender, 
+            auth,
+            lien, 
+            authSignature
+        );
+
+        if (offer.newRate > _LIQUIDATION_THRESHOLD) {
+            revert RateTooHigh();
+        }
+
+        cancelledOrFulfilled[offer.lender][offer.salt] = 1;
+
+        emit Loan(
+            lien.offerHash,
+            lienId,
+            lien.lender,
+            lien.borrower,
+            lien.collateralType,
+            lien.collection,
+            lien.tokenId,
+            lien.size,
+            lien.currency,
+            lien.amount,
+            lien.rate,
+            lien.duration,
+            lien.startTime,
+            offer.fees
         );
     }
 
@@ -185,7 +222,7 @@ contract OfferController is IOfferController, Ownable, Signatures {
             lien.collateralType,
             lien.collection,
             lien.tokenId,
-            lien.amount
+            lien.size
         );
 
         bytes32 authHash = _hashOfferAuth(auth);
