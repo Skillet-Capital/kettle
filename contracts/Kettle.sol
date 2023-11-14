@@ -36,6 +36,7 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
 
     mapping(uint256 => bytes32) public liens;
     mapping(address => address) public escrows;
+    mapping(bytes32 => uint256) private _gracePeriod;
 
     constructor(address authSigner) OfferController(authSigner) { }
 
@@ -59,11 +60,19 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
         }
     }
 
+    function getGracePeriodForLien(uint256 lienId) public view returns (uint256 duration) {
+        duration = _gracePeriod[liens[lienId]];
+    }
+
     /*//////////////////////////////////////////////////
                        SETTERS
     //////////////////////////////////////////////////*/
     function setEscrow(address collection, address escrow) external onlyOwner {
         escrows[collection] = escrow;
+    }
+
+    function setGracePeriodForLien(uint256 lienId, uint256 duration) external onlyOwner {
+        _gracePeriod[liens[lienId]] = duration;
     }
 
     /*//////////////////////////////////////////////////
@@ -440,6 +449,7 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
             lien.duration
         );
 
+        delete _gracePeriod[liens[lienId]];
         delete liens[lienId];
 
         emit Repay(
@@ -754,6 +764,7 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
             }
 
             /* Check that the auction has ended and lien is defaulted. */
+            delete _gracePeriod[liens[lienId]];
             delete liens[lienId];
 
             /* Seize collateral to lender. */
@@ -837,6 +848,7 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
     }
 
     function _lienIsDefaulted(Lien calldata lien) internal view returns (bool) {
-        return lien.startTime + lien.duration < block.timestamp;
+        bytes32 lienHash = keccak256(abi.encode(lien));
+        return lien.startTime + lien.duration + _gracePeriod[lienHash] < block.timestamp;
     }
 }
