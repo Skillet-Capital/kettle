@@ -3,6 +3,8 @@ import { ethers } from "hardhat";
 async function main() {
   const [owner, authSigner] = await ethers.getSigners();
 
+  console.log(await authSigner.getAddress());
+
   /* Deploy Helpers */
   const helpers = await ethers.deployContract("Helpers");
   await helpers.waitForDeployment();
