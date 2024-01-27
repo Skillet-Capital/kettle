@@ -39,6 +39,13 @@ interface IKettle is IOfferController {
         uint256 newDuration
     );
 
+    event TransferLien(
+        uint256 lienId,
+        address oldLender,
+        address newLender,
+        uint256 amount
+    );
+
     function liens(uint256 lienId) external view returns (bytes32 lienHash);
 
     function getRepaymentAmount(

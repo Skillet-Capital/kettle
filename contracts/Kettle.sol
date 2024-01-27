@@ -13,7 +13,7 @@ import { Signatures } from "./lib/Signatures.sol";
 import { OfferController } from "./OfferController.sol";
 import { IKettle } from "./interfaces/IKettle.sol";
 
-import { CollateralType, Fee, Lien, LoanOffer, BorrowOffer, RenegotiationOffer, LoanOfferInput, BorrowOfferInput, LienPointer, LoanFullfillment, BorrowFullfillment, RepayFullfillment, RefinanceFullfillment, OfferAuth } from "./lib/Structs.sol";
+import { CollateralType, Fee, Lien, LoanOffer, BorrowOffer, RenegotiationOffer, TransferOffer, LoanOfferInput, BorrowOfferInput, LienPointer, LoanFullfillment, BorrowFullfillment, RepayFullfillment, RefinanceFullfillment, OfferAuth } from "./lib/Structs.sol";
 
 import { InvalidLien, Unauthorized, LienIsDefaulted, LienNotDefaulted, CollectionsDoNotMatch, CurrenciesDoNotMatch, NoEscrowImplementation, InvalidCollateralSize, InvalidCollateralType, TotalFeeTooHigh, InvalidLienHash, LienIdMismatch, InvalidDuration, LendersDoNotMatch } from "./lib/Errors.sol";
 
@@ -553,23 +553,36 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
         /// transfer fees 
         /// caller of method must pay fees in order to refinance offer
         /// fees are calculated based on the new loan amount
-        payFees(
-            offer.currency,
-            msg.sender,
-            amount,
-            offer.fees
-        );
+
+        uint256 totalFees = 0;
+        for (uint256 i = 0; i < offer.fees.length; i++) {
+            // skip if fee rate is 0
+            if (offer.fees[i].rate == 0) {
+                continue;
+            }
+
+            uint256 feeAmount = Helpers.computeFeeAmount(
+                amount,
+                offer.fees[i].rate
+            );
+
+            unchecked {
+                totalFees += feeAmount;
+            }
+        }
 
         /// if amount is greater than repayment amount
         /// transfer repayment amount from new lender to old lender (if different)
         /// transfer leftover from new lender to borrower
-        if (amount >= repayAmount) {
+        if (amount >= repayAmount + totalFees) {
             if (offer.lender != lien.lender) {
                 SafeTransfer.transferERC20(offer.currency, offer.lender, lien.lender, repayAmount);
             }
             unchecked {
                 SafeTransfer.transferERC20(offer.currency, offer.lender, lien.borrower, amount - repayAmount);
             }
+
+
 
         /// if amount is less than repayment amount
         /// transfer amount from new lender to old lender (if different)
@@ -582,6 +595,13 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
                 SafeTransfer.transferERC20(offer.currency, lien.borrower, lien.lender, repayAmount - amount);
             }
         }
+
+        payFees(
+            offer.currency,
+            msg.sender,
+            amount,
+            offer.fees
+        );
     }
 
     /// @notice Refinance and existing lien with new loan offer
@@ -660,6 +680,57 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
             newLien.duration,
             lien.rate,
             newLien.rate
+        );
+    }
+
+    function transferLien(
+        Lien calldata lien,
+        uint256 lienId,
+        TransferOffer calldata offer,
+        bytes calldata offerSignature
+    ) public 
+      validateLien(lien, lienId) 
+      lienIsActive(lien) 
+    {
+
+        // caller must be borrower
+        if (msg.sender != lien.lender) {
+            revert Unauthorized();
+        }
+
+        Lien memory newLien = Lien({
+            offerHash: lien.offerHash,
+            lender: offer.lender,
+            borrower: lien.borrower,
+            collateralType: lien.collateralType,
+            collection: lien.collection,
+            tokenId: lien.tokenId,
+            size: lien.size,
+            currency: lien.currency,
+            amount: lien.amount,
+            startTime: lien.startTime,
+            duration: lien.duration,
+            rate: lien.rate
+        });
+
+        /// store the lien in struct
+        unchecked {
+            liens[lienId] = keccak256(abi.encode(newLien));
+        }
+
+        // transfer amount to old lender
+        SafeTransfer.transferERC20(
+            lien.currency,
+            offer.lender,
+            lien.lender,
+            lien.amount
+        );
+
+        emit TransferLien(
+            lienId,
+            lien.lender,
+            offer.lender,
+            offer.amount
         );
     }
     
