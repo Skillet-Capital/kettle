@@ -21,9 +21,7 @@ import {
   Kettle, 
   TestERC20, 
   TestERC721, 
-  TestERC1155,
-  ERC721EscrowBase,
-  ERC1155EscrowBase
+  TestERC1155
 } from "../typechain-types";
 
 const DAY_SECONDS = 24 * 60 * 60;
@@ -37,8 +35,6 @@ describe("Kettle", () => {
   let testErc721: TestERC721;
   let testErc1155: TestERC1155;
   let testErc20: TestERC20;
-  let erc721Escrow: ERC721EscrowBase;
-  let erc1155Escrow: ERC1155EscrowBase;
 
   let blockTimestamp: number;
 
@@ -50,9 +46,7 @@ describe("Kettle", () => {
       kettle,
       testErc721,
       testErc1155,
-      testErc20,
-      erc721Escrow,
-      erc1155Escrow
+      testErc20
     } = await loadFixture(getFixture));
 
     blockTimestamp = await time.latest();
@@ -133,7 +127,7 @@ describe("Kettle", () => {
           .then((receipt) => extractLien(receipt!, kettle)
         );
 
-        expect(await testErc721.ownerOf(tokenId1)).to.equal(await erc721Escrow.getAddress());
+        expect(await testErc721.ownerOf(tokenId1)).to.equal(await kettle.getAddress());
         expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
 
         // expect correct lienId
@@ -216,8 +210,8 @@ describe("Kettle", () => {
           ]
         );
 
-        expect(await testErc721.ownerOf(tokenId1)).to.equal(await erc721Escrow.getAddress());
-        expect(await testErc721.ownerOf(tokenId2)).to.equal(await erc721Escrow.getAddress());
+        expect(await testErc721.ownerOf(tokenId1)).to.equal(await kettle.getAddress());
+        expect(await testErc721.ownerOf(tokenId2)).to.equal(await kettle.getAddress());
         expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount * BigInt(2));
 
         const lienPointers = await txn.wait()
@@ -307,52 +301,6 @@ describe("Kettle", () => {
           authSignature
         )).to.be.revertedWithCustomError(kettle, "AuthorizationExpired")
       });
-
-      it('should send to kettle with no escrow implementation', async () => {
-        const testErc721_2 = await ethers.deployContract("TestERC721");
-        await testErc721_2.waitForDeployment();
-
-        await testErc721_2.mint(borrower, tokenId1);
-        await testErc721_2.connect(borrower).setApprovalForAll(kettle, true);
-
-        const { offer: borrowOffer2, offerSignature } = await prepareBorrowOffer(
-          kettle,
-          borrower,
-          {
-          borrower: borrower,
-          collateralType: CollateralType.ERC721,
-          tokenId: tokenId1,
-          collection: testErc721_2,
-          currency: testErc20,
-          amount: loanAmount,
-          duration: DAY_SECONDS * 7,
-          rate: 100_000,
-          expiration: blockTimestamp + DAY_SECONDS * 7,
-        });
-
-        ({ auth: offerAuth, authSignature } = await prepareBorrowOfferAuth(
-          kettle,
-          authSigner,
-          lender,
-          await time.latest() + 100,
-          borrowOffer2,
-          {
-            collateralType: CollateralType.ERC721,
-            collection: testErc721_2,
-            tokenId: tokenId1,
-            size: 1
-          }
-        ));
-
-        await kettle.connect(lender).loan(
-          borrowOffer2,
-          offerAuth,
-          offerSignature,
-          authSignature
-        );
-
-        expect(await testErc721_2.ownerOf(tokenId1)).to.equal(await kettle.getAddress());
-      });
     });
 
     describe("collateralType === ERC1155", () => {
@@ -407,7 +355,7 @@ describe("Kettle", () => {
         );
 
         // expect ownership transfer
-        expect(await testErc1155.balanceOf(erc1155Escrow, tokenId1)).to.equal(token1Amount);
+        expect(await testErc1155.balanceOf(kettle, tokenId1)).to.equal(token1Amount);
         expect(await testErc1155.balanceOf(borrower, tokenId1)).to.equal(0);
         expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
 
@@ -497,10 +445,10 @@ describe("Kettle", () => {
           ]
         );
 
-        expect(await testErc1155.balanceOf(erc1155Escrow, tokenId1)).to.equal(token1Amount);
+        expect(await testErc1155.balanceOf(kettle, tokenId1)).to.equal(token1Amount);
         expect(await testErc1155.balanceOf(borrower, tokenId1)).to.equal(0);
         
-        expect(await testErc1155.balanceOf(erc1155Escrow, tokenId2)).to.equal(token2Amount);
+        expect(await testErc1155.balanceOf(kettle, tokenId2)).to.equal(token2Amount);
         expect(await testErc1155.balanceOf(borrower, tokenId2)).to.equal(0);
 
         expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount * BigInt(2));

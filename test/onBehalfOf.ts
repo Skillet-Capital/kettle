@@ -21,8 +21,7 @@ import { LienPointer } from "../types";
 import { 
   Kettle, 
   TestERC20, 
-  TestERC721, 
-  ERC721EscrowBase,
+  TestERC721
 } from "../typechain-types";
 
 const DAY_SECONDS = 24 * 60 * 60;
@@ -35,7 +34,6 @@ describe("Kettle", () => {
   let kettle: Kettle;
   let testErc721: TestERC721;
   let testErc20: TestERC20;
-  let erc721Escrow: ERC721EscrowBase;
 
   let blockTimestamp: number;
 
@@ -46,8 +44,7 @@ describe("Kettle", () => {
       authSigner,
       kettle,
       testErc721,
-      testErc20,
-      erc721Escrow,
+      testErc20
     } = await loadFixture(getFixture));
 
     blockTimestamp = await time.latest();
@@ -141,7 +138,7 @@ describe("Kettle", () => {
           async (receipt) => extractLien(receipt!, kettle)
         ));
 
-        expect(await testErc721.ownerOf(tokenId1)).to.equal(await erc721Escrow.getAddress());
+        expect(await testErc721.ownerOf(tokenId1)).to.equal(await kettle.getAddress());
         expect(await testErc20.balanceOf(onBehalfOf)).to.equal(loanAmount);
         expect(lien.borrower).to.equal(await onBehalfOf.getAddress());
 
@@ -231,8 +228,8 @@ describe("Kettle", () => {
           async (receipt) => extractLiens(receipt!, kettle)
         );
 
-        expect(await testErc721.ownerOf(tokenId1)).to.equal(await erc721Escrow.getAddress());
-        expect(await testErc721.ownerOf(tokenId2)).to.equal(await erc721Escrow.getAddress());
+        expect(await testErc721.ownerOf(tokenId1)).to.equal(await kettle.getAddress());
+        expect(await testErc721.ownerOf(tokenId2)).to.equal(await kettle.getAddress());
 
         expect(await testErc20.balanceOf(onBehalfOf)).to.equal(loanAmount);
 

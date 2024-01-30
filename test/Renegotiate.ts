@@ -28,10 +28,7 @@ import {
   Kettle,
   TestERC1155,
   TestERC20,
-  TestERC721,
-  ERC721EscrowBase,
-  ERC1155EscrowBase,
-  CollateralVerifier
+  TestERC721
 } from "../typechain-types";
 import { LienPointer } from "../types";
 

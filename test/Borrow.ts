@@ -24,9 +24,7 @@ import {
   TestERC20,
   TestERC721,
   TestERC1155,
-  CollateralVerifier,
-  ERC721EscrowBase,
-  ERC1155EscrowBase
+  CollateralVerifier
 } from "../typechain-types";
 
 const DAY_SECONDS = 24 * 60 * 60;
@@ -42,8 +40,6 @@ describe("Kettle", () => {
   let testErc1155: TestERC1155;
   let testErc20: TestERC20;
   let verifier: CollateralVerifier;
-  let erc721Escrow: ERC721EscrowBase;
-  let erc1155Escrow: ERC1155EscrowBase;
 
   let blockTimestamp: number;
 
@@ -56,9 +52,7 @@ describe("Kettle", () => {
       testErc721,
       testErc1155,
       testErc20,
-      verifier,
-      erc721Escrow,
-      erc1155Escrow
+      verifier
     } = await loadFixture(getFixture));
 
     blockTimestamp = await time.latest();
@@ -152,7 +146,7 @@ describe("Kettle", () => {
           .then((receipt) => extractLien(receipt!, kettle)
           );
 
-        expect(await testErc721.ownerOf(tokenId1)).to.equal(await erc721Escrow.getAddress());
+        expect(await testErc721.ownerOf(tokenId1)).to.equal(await kettle.getAddress());
         expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
 
         // expect correct lienId
@@ -246,8 +240,8 @@ describe("Kettle", () => {
         const lienPointers = await txn.wait()
           .then(receipt => extractLiens(receipt!, kettle))
 
-        expect(await testErc721.ownerOf(tokenId1)).to.equal(await erc721Escrow.getAddress());
-        expect(await testErc721.ownerOf(tokenId2)).to.equal(await erc721Escrow.getAddress());
+        expect(await testErc721.ownerOf(tokenId1)).to.equal(await kettle.getAddress());
+        expect(await testErc721.ownerOf(tokenId2)).to.equal(await kettle.getAddress());
         expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
 
         // expect correct number of lien pointers
@@ -285,61 +279,6 @@ describe("Kettle", () => {
           }
         );
       });
-
-      it('should send to kettle with no escrow implementation', async () => {
-        const testErc721_2 = await ethers.deployContract("TestERC721");
-        await testErc721_2.waitForDeployment();
-
-        await testErc721_2.mint(borrower, tokenId1);
-        await testErc721_2.connect(borrower).setApprovalForAll(kettle, true);
-
-        const { offer: tokenOffer2, offerSignature: offerSignature2, offerHash: offerHash2 } = await prepareLoanOffer(
-          kettle,
-          lender,
-          {
-            lender: lender,
-            collateralType: CollateralType.ERC721,
-            collection: testErc721_2,
-            identifier: tokenId1,
-            size: 1,
-            currency: testErc20,
-            totalAmount: loanAmount,
-            minAmount: 0,
-            maxAmount: loanAmount,
-            duration: DAY_SECONDS * 7,
-            rate: 100_000,
-            expiration: blockTimestamp + DAY_SECONDS * 7,
-          }
-        );
-
-        const { auth: offerAuth2, authSignature: authSignature2 } = await prepareLoanOfferAuth(
-          kettle,
-          authSigner,
-          borrower,
-          blockTimestamp + 100,
-          tokenOffer2,
-          {
-            collateralType: CollateralType.ERC721,
-            collection: testErc721_2,
-            tokenId: tokenId1,
-            size: 1
-          }
-        );
-
-        await kettle.connect(borrower).borrow(
-          tokenOffer2,
-          offerAuth2,
-          offerSignature2,
-          authSignature2,
-          loanAmount,
-          tokenId1,
-          ADDRESS_ZERO,
-          []
-        );
-
-        expect(await testErc721_2.ownerOf(tokenId1)).to.equal(await kettle.getAddress());
-        expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
-      })
 
       it('should reject cancelled loan offer (OfferUnavailable)', async () => {
         await kettle.connect(lender).cancelOffer(tokenOffer.salt)
@@ -527,7 +466,7 @@ describe("Kettle", () => {
           .then((receipt) => extractLien(receipt!, kettle)
           );
 
-        expect(await testErc721.ownerOf(tokenId1)).to.equal(await erc721Escrow.getAddress());
+        expect(await testErc721.ownerOf(tokenId1)).to.equal(await kettle.getAddress());
         expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
 
         // expect correct lienId
@@ -599,8 +538,8 @@ describe("Kettle", () => {
         const lienPointers = await txn.wait()
           .then(receipt => extractLiens(receipt!, kettle))
 
-        expect(await testErc721.ownerOf(tokenId1)).to.equal(await erc721Escrow.getAddress());
-        expect(await testErc721.ownerOf(tokenId2)).to.equal(await erc721Escrow.getAddress());
+        expect(await testErc721.ownerOf(tokenId1)).to.equal(await kettle.getAddress());
+        expect(await testErc721.ownerOf(tokenId2)).to.equal(await kettle.getAddress());
         expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
 
         // expect lien pointers are correct
@@ -648,7 +587,7 @@ describe("Kettle", () => {
           traitProof
         );
 
-        expect(await testErc721.ownerOf(tokenId2)).to.equal(await erc721Escrow.getAddress());
+        expect(await testErc721.ownerOf(tokenId2)).to.equal(await kettle.getAddress());
         expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
       });
 
@@ -691,8 +630,8 @@ describe("Kettle", () => {
         const lienPointers = await txn.wait()
           .then(receipt => extractLiens(receipt!, kettle))
 
-        expect(await testErc721.ownerOf(tokenId1)).to.equal(await erc721Escrow.getAddress());
-        expect(await testErc721.ownerOf(tokenId2)).to.equal(await erc721Escrow.getAddress());
+        expect(await testErc721.ownerOf(tokenId1)).to.equal(await kettle.getAddress());
+        expect(await testErc721.ownerOf(tokenId2)).to.equal(await kettle.getAddress());
         expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
 
         // expect lien pointers are correct
@@ -836,7 +775,7 @@ describe("Kettle", () => {
           .then((receipt) => extractLien(receipt!, kettle)
           );
 
-        expect(await testErc1155.balanceOf(erc1155Escrow, tokenId1)).to.equal(tokenAmount1);
+        expect(await testErc1155.balanceOf(kettle, tokenId1)).to.equal(tokenAmount1);
         expect(await testErc1155.balanceOf(borrower, tokenId1)).to.equal(0);
         expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
 
@@ -928,10 +867,10 @@ describe("Kettle", () => {
           ADDRESS_ZERO
         );
 
-        expect(await testErc1155.balanceOf(erc1155Escrow, tokenId1)).to.equal(tokenAmount1);
+        expect(await testErc1155.balanceOf(kettle, tokenId1)).to.equal(tokenAmount1);
         expect(await testErc1155.balanceOf(borrower, tokenId1)).to.equal(0);
 
-        expect(await testErc1155.balanceOf(erc1155Escrow, tokenId2)).to.equal(tokenAmount2);
+        expect(await testErc1155.balanceOf(kettle, tokenId2)).to.equal(tokenAmount2);
         expect(await testErc1155.balanceOf(borrower, tokenId2)).to.equal(0);
 
         expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
@@ -1041,7 +980,7 @@ describe("Kettle", () => {
           .then((receipt) => extractLien(receipt!, kettle)
           );
 
-        expect(await testErc1155.balanceOf(erc1155Escrow, tokenId1)).to.equal(tokenAmount1);
+        expect(await testErc1155.balanceOf(kettle, tokenId1)).to.equal(tokenAmount1);
         expect(await testErc1155.balanceOf(borrower, tokenId1)).to.equal(0);
         expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
 
@@ -1113,10 +1052,10 @@ describe("Kettle", () => {
           ADDRESS_ZERO
         );
 
-        expect(await testErc1155.balanceOf(erc1155Escrow, tokenId1)).to.equal(tokenAmount1);
+        expect(await testErc1155.balanceOf(kettle, tokenId1)).to.equal(tokenAmount1);
         expect(await testErc1155.balanceOf(borrower, tokenId2)).to.equal(0);
 
-        expect(await testErc1155.balanceOf(erc1155Escrow, tokenId2)).to.equal(tokenAmount2);
+        expect(await testErc1155.balanceOf(kettle, tokenId2)).to.equal(tokenAmount2);
         expect(await testErc1155.balanceOf(borrower, tokenId2)).to.equal(0);
 
         expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
