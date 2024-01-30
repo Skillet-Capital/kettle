@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ERC721Holder } from "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import { ERC1155Holder } from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
@@ -110,12 +111,16 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
                 fees[i].rate
             );
 
-            SafeTransfer.transferERC20(
-                currency, 
-                payer, 
-                fees[i].recipient, 
-                feeAmount
-            );
+            if (payer == address(this)) {
+                IERC20(currency).transfer(fees[i].recipient, feeAmount);
+            } else {
+                SafeTransfer.transferERC20(
+                    currency, 
+                    payer, 
+                    fees[i].recipient, 
+                    feeAmount
+                );
+            }
 
             unchecked {
                 totalFees += feeAmount;
@@ -154,7 +159,7 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
                 fullfillment.amount,
                 fullfillment.tokenId,
                 borrower,
-                false,
+                fullfillment.useEscrow,
                 fullfillment.proof
             );
         }
@@ -178,7 +183,7 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
         uint256 amount,
         uint256 tokenId,
         address borrower,
-        bool fromEscrow,
+        bool useEscrow,
         bytes32[] calldata proof
     ) public returns (uint256 lienId) {
 
@@ -206,25 +211,25 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
             borrower
         );
 
-        /// if from escrow, transfer total amount to contract
-        /// use contract as source of funds (does not require borrower approvals)
-        address lendingSource = offer.lender;
-        if (fromEscrow) {
-            lendingSource = address(this);
-
-            bytes32 offerHash = _hashLoanOffer(offer);
-            ILendingEscrow(_lendingEscrow).useEscrow(offerHash);
-        }
-
         /// transfer collateral from borrower to escrow
         SafeTransfer.transfer(
             offer.collateralType, 
-            offer.collection, 
+            offer.collection,
             msg.sender, 
             address(this), 
-            tokenId, 
+            tokenId,
             offer.size
         );
+
+        /// if from escrow, transfer total amount to contract
+        /// use contract as source of funds (does not require borrower approvals)
+        address lendingSource = offer.lender;
+        if (useEscrow) {
+            lendingSource = address(this);
+
+            bytes32 offerHash = _hashLoanOffer(offer);
+            ILendingEscrow(_lendingEscrow).useEscrow(offerHash, amount);
+        }
 
         /// transfer fees from lender
         uint256 totalFees = payFees(
@@ -236,12 +241,16 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
 
         /// transfer net loan amount to borrower
         unchecked {
-            SafeTransfer.transferERC20(
-                offer.currency, 
-                lendingSource,
-                borrower, 
-                amount - totalFees
-            );
+            if (lendingSource == address(this)) {
+                IERC20(offer.currency).transfer(borrower, amount - totalFees);
+            } else {
+                SafeTransfer.transferERC20(
+                    offer.currency, 
+                    lendingSource,
+                    borrower, 
+                    amount - totalFees
+                );
+            }
         }
     }
 
