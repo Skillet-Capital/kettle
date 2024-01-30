@@ -36,14 +36,21 @@ import { InvalidLien, Unauthorized, LienIsDefaulted, LienNotDefaulted, Collectio
 
 contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, ERC721Holder, ERC1155Holder {
     uint256 private _nextLienId;
+    address private _originalKettleAddress;
 
     mapping(uint256 => bytes32) public liens;
-    mapping(address => address) public escrows;
     mapping(bytes32 => uint256) private _gracePeriod;
 
     uint256[50] private _gap;
 
-    constructor(address authSigner) OfferController(authSigner) { }
+    constructor(
+        uint256 nextLienId,
+        address authSigner,
+        address originalKettleAddress
+    ) OfferController(authSigner) {
+        _nextLienId = nextLienId;
+        _originalKettleAddress = originalKettleAddress;
+    }
 
     /// @notice calculate repayment amount given amount, rate, and duration
     /// @param amount loan amount
@@ -58,19 +65,6 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
         return Helpers.computeCurrentDebt(amount, rate, duration);
     }
 
-    /// @notice get custom escrow address for collection
-    /// @dev if no escrow is set, return this contract address
-    /// @param collection collection address
-    /// @return escrow address
-    function getEscrow(
-        address collection
-    ) public view returns (address escrow) {
-        escrow = escrows[collection];
-        if (escrow == address(0)) {
-            return address(this);
-        }
-    }
-
     /// @notice return grace period given a lien id
     /// @dev grace periods are set per lien hash
     /// @dev if lien hash changes, grace period will default to 0
@@ -78,14 +72,6 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
     /// @return duration grace period duration
     function getGracePeriodForLien(uint256 lienId) public view returns (uint256 duration) {
         duration = _gracePeriod[liens[lienId]];
-    }
-
-    /// @notice set custom escrow address for collection (only owner can call this method)
-    /// @dev if no escrow is set, return this contract address
-    /// @param collection collection address
-    /// @param escrow escrow address
-    function setEscrow(address collection, address escrow) external onlyOwner {
-        escrows[collection] = escrow;
     }
 
     /// @notice set grace period for a lien id (only owner can call this method)
@@ -223,7 +209,7 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
             offer.collateralType, 
             offer.collection, 
             msg.sender, 
-            getEscrow(offer.collection), 
+            address(this), 
             tokenId, 
             offer.size
         );
@@ -342,7 +328,7 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
             offer.collateralType,
             offer.collection,
             offer.borrower,
-            getEscrow(offer.collection),
+            address(this),
             offer.tokenId,
             offer.size
         );
@@ -432,7 +418,7 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
         SafeTransfer.transfer(
             lien.collateralType,
             lien.collection,
-            getEscrow(lien.collection),
+            address(this),
             lien.borrower,
             lien.tokenId,
             lien.size
@@ -806,7 +792,7 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
             SafeTransfer.transfer(
                 lien.collateralType, 
                 lien.collection, 
-                getEscrow(lien.collection), 
+                address(this), 
                 lien.lender, 
                 lien.tokenId,
                 lien.size
@@ -883,7 +869,12 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
         Lien calldata lien,
         uint256 lienId
     ) internal view returns (bool) {
-        return liens[lienId] == keccak256(abi.encode(lien));
+        bool exists = liens[lienId] == keccak256(abi.encode(lien));
+        if (!exists) {
+            exists = IKettle(_originalKettleAddress).liens(lienId) == keccak256(abi.encode(lien));
+        }
+
+        return exists;
     }
 
     /// @notice compute endtime of lien and compare against block timestamp
