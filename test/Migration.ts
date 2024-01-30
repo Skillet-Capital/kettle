@@ -163,7 +163,15 @@ describe("Kettle", () => {
         });
 
         // repay loan on new kettle contract
+        const repaymentAmount = await newKettle.getRepaymentAmount(
+          lien.amount,
+          lien.rate,
+          lien.duration
+        );
 
+        await testErc20.connect(borrower).approve(newKettle, repaymentAmount);
+
+        await newKettle.connect(borrower).repay(lien, lienId);
 
       });
     });

@@ -35,6 +35,7 @@ import { InvalidLien, Unauthorized, LienIsDefaulted, LienNotDefaulted, Collectio
 /// @notice Kettle is a decentralized lending protocol
 
 contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, ERC721Holder, ERC1155Holder {
+    uint256 private immutable _startingLienId;
     uint256 private _nextLienId;
     address private _originalKettleAddress;
 
@@ -44,11 +45,12 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
     uint256[50] private _gap;
 
     constructor(
-        uint256 nextLienId,
+        uint256 startingLienId,
         address authSigner,
         address originalKettleAddress
     ) OfferController(authSigner) {
-        _nextLienId = nextLienId;
+        _startingLienId = startingLienId;
+        _nextLienId = startingLienId;
         _originalKettleAddress = originalKettleAddress;
     }
 
@@ -869,12 +871,11 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
         Lien calldata lien,
         uint256 lienId
     ) internal view returns (bool) {
-        bool exists = liens[lienId] == keccak256(abi.encode(lien));
-        if (!exists) {
-            exists = IKettle(_originalKettleAddress).liens(lienId) == keccak256(abi.encode(lien));
+        if (lienId < _startingLienId) {
+            return IKettle(_originalKettleAddress).liens(lienId) == keccak256(abi.encode(lien));
+        } else {
+            return liens[lienId] == keccak256(abi.encode(lien));
         }
-
-        return exists;
     }
 
     /// @notice compute endtime of lien and compare against block timestamp
