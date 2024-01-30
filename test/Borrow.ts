@@ -138,6 +138,7 @@ describe("Kettle", () => {
           loanAmount,
           tokenId1,
           ADDRESS_ZERO,
+          false,
           [],
         );
 
@@ -221,6 +222,7 @@ describe("Kettle", () => {
               offerIndex: 0,
               amount: ethers.parseEther("5"),
               tokenId: tokenId1,
+              useEscrow: false,
               proof: [],
               auth: offerAuth,
               authSignature: authSignature
@@ -229,6 +231,7 @@ describe("Kettle", () => {
               offerIndex: 1,
               amount: ethers.parseEther("5"),
               tokenId: tokenId2,
+              useEscrow: false,
               proof: [],
               auth: offerAuth2,
               authSignature: authSignature2
@@ -291,6 +294,7 @@ describe("Kettle", () => {
           loanAmount,
           tokenId1,
           ADDRESS_ZERO,
+          false,
           []
         )).to.be.revertedWithCustomError(kettle, "OfferUnavailable");
       });
@@ -306,6 +310,7 @@ describe("Kettle", () => {
           loanAmount,
           tokenId1,
           ADDRESS_ZERO,
+          false,
           []
         )).to.be.revertedWithCustomError(kettle, "InvalidSignature");
       });
@@ -319,6 +324,7 @@ describe("Kettle", () => {
           loanAmount,
           tokenId2,
           ADDRESS_ZERO,
+          false,
           []
         )).to.be.revertedWithCustomError(verifier, "InvalidCollateral");
       });
@@ -337,6 +343,7 @@ describe("Kettle", () => {
               offerIndex: 0,
               amount: ethers.parseEther("5"),
               tokenId: tokenId1,
+              useEscrow: false,
               proof: proof1,
               auth: offerAuth,
               authSignature: authSignature
@@ -345,6 +352,7 @@ describe("Kettle", () => {
               offerIndex: 0,
               amount: ethers.parseEther("5"),
               tokenId: tokenId2,
+              useEscrow: false,
               proof: proof2,
               auth: offerAuth,
               authSignature: authSignature
@@ -458,6 +466,7 @@ describe("Kettle", () => {
           loanAmount,
           tokenId1,
           ADDRESS_ZERO,
+          false,
           proof
         );
 
@@ -519,6 +528,7 @@ describe("Kettle", () => {
               offerIndex: 0,
               amount: ethers.parseEther("5"),
               tokenId: tokenId1,
+              useEscrow: false,
               proof: proof1,
               auth: collectionOfferAuth,
               authSignature: collectionOfferAuthSignature
@@ -527,6 +537,7 @@ describe("Kettle", () => {
               offerIndex: 0,
               amount: ethers.parseEther("5"),
               tokenId: tokenId2,
+              useEscrow: false,
               proof: proof2,
               auth: collectionOfferAuth2,
               authSignature: collectionOfferAuthSignature2
@@ -584,6 +595,7 @@ describe("Kettle", () => {
           loanAmount,
           tokenId2,
           ADDRESS_ZERO,
+          false,
           traitProof
         );
 
@@ -611,6 +623,7 @@ describe("Kettle", () => {
               offerIndex: 0,
               amount: ethers.parseEther("5"),
               tokenId: tokenId1,
+              useEscrow: false,
               proof: proof1,
               auth: collectionOfferAuth,
               authSignature: collectionOfferAuthSignature
@@ -619,6 +632,7 @@ describe("Kettle", () => {
               offerIndex: 1,
               amount: ethers.parseEther("5"),
               tokenId: tokenId2,
+              useEscrow: false,
               proof: proof2,
               auth: traitOfferAuth,
               authSignature: traitOfferAuthSignature
@@ -678,6 +692,7 @@ describe("Kettle", () => {
           loanAmount,
           tokenId2,
           ADDRESS_ZERO,
+          false,
           traitProof
         )).to.be.revertedWithCustomError(verifier, "InvalidCollateralCriteria");
       })
@@ -697,6 +712,7 @@ describe("Kettle", () => {
               amount: ethers.parseEther("5"),
               tokenId: 1,
               proof: proof1,
+              useEscrow: false,
               auth: collectionOfferAuth,
               authSignature: collectionOfferAuthSignature
             },
@@ -705,6 +721,7 @@ describe("Kettle", () => {
               amount: ethers.parseEther("5"),
               tokenId: 3,
               proof: proof2,
+              useEscrow: false,
               auth: collectionOfferAuth,
               authSignature: collectionOfferAuthSignature
             }
@@ -767,6 +784,7 @@ describe("Kettle", () => {
           loanAmount,
           tokenId1,
           ADDRESS_ZERO,
+          false,
           []
         );
 
@@ -851,6 +869,7 @@ describe("Kettle", () => {
               offerIndex: 0,
               amount: ethers.parseEther("5"),
               tokenId: tokenId1,
+              useEscrow: false,
               proof: [],
               auth: offerAuth,
               authSignature: authSignature
@@ -859,6 +878,7 @@ describe("Kettle", () => {
               offerIndex: 1,
               amount: ethers.parseEther("5"),
               tokenId: tokenId2,
+              useEscrow: false,
               proof: [],
               auth: offerAuth2,
               authSignature: authSignature2
@@ -972,6 +992,7 @@ describe("Kettle", () => {
           loanAmount,
           tokenId1,
           ADDRESS_ZERO,
+          false,
           proof
         );
 
@@ -1036,6 +1057,7 @@ describe("Kettle", () => {
               offerIndex: 0,
               amount: ethers.parseEther("5"),
               tokenId: tokenId1,
+              useEscrow: false,
               proof: proof1,
               auth: offerAuth,
               authSignature: authSignature
@@ -1044,6 +1066,7 @@ describe("Kettle", () => {
               offerIndex: 0,
               amount: ethers.parseEther("5"),
               tokenId: tokenId2,
+              useEscrow: false,
               proof: proof2,
               auth: offerAuth2,
               authSignature: authSignature2
