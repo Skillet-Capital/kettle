@@ -73,6 +73,7 @@ struct LoanFullfillment {
     uint256 offerIndex;
     uint256 amount;
     uint256 tokenId;
+    bool useEscrow;
     OfferAuth auth;
     bytes authSignature;
     bytes32[] proof;
@@ -163,4 +164,22 @@ struct OfferAuth {
     address taker;
     uint256 expiration;
     bytes32 collateralHash;
+}
+
+/*//////////////////////////////////////////////////
+                ESCROW STRUCTS
+//////////////////////////////////////////////////*/
+struct EscrowFunds {
+    address lender;
+    address currency;
+    uint256 amount;
+    uint256 authorizedAmount;
+    uint256 expiration;
+}
+
+struct UpdateEscrowAuth {
+    address lender;
+    bytes32 offerHash;
+    uint256 amount;
+    uint256 expiration;
 }
