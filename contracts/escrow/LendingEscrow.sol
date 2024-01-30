@@ -5,10 +5,11 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeTransfer } from "../SafeTransfer.sol";
 
 import { Signatures } from "./Signatures.sol";
+import { ILendingEscrow } from "../interfaces/ILendingEscrow.sol";
 
 import { EscrowFunds, UpdateEscrowAuth } from "../lib/Structs.sol";
 
-contract LendingEscrow is SafeTransfer, Signatures {
+contract LendingEscrow is ILendingEscrow, SafeTransfer, Signatures {
     address public _authSigner;
 
     uint256 private immutable ADMIN_ROLE = 0;
@@ -75,6 +76,8 @@ contract LendingEscrow is SafeTransfer, Signatures {
             address(this),
             amount
         );
+
+        emit EscrowCreated(offerHash);
     }
 
     /// @notice Update authorized amount for escrow
@@ -127,6 +130,8 @@ contract LendingEscrow is SafeTransfer, Signatures {
         }
 
         escrowFunds[offerHash].authorizedAmount = amount;
+
+        emit EscrowUpdated(offerHash, amount);
     }
 
     /// @notice Use escrow for loan initiation
@@ -166,6 +171,8 @@ contract LendingEscrow is SafeTransfer, Signatures {
         }
 
         delete escrowFunds[offerHash];
+
+        emit EscrowUsed(offerHash, amount);
     }
 
     /// @notice Return escrow to lender
@@ -181,6 +188,8 @@ contract LendingEscrow is SafeTransfer, Signatures {
         );
 
         delete escrowFunds[offerHash];
+
+        emit EscrowDestroyed(offerHash);
     }
 
     /// @notice Withdraw escrow to lender
@@ -204,6 +213,8 @@ contract LendingEscrow is SafeTransfer, Signatures {
         );
         
         delete escrowFunds[offerHash];
+
+        emit EscrowDestroyed(offerHash);
     }
 
     modifier requiresRole(uint256 role) {
