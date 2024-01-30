@@ -24,9 +24,7 @@ import {
   TestERC20, 
   TestERC721, 
   TestERC1155,
-  CollateralVerifier,
-  ERC721EscrowBase,
-  ERC1155EscrowBase
+  CollateralVerifier
 } from "../typechain-types";
 
 const DAY_SECONDS = 24 * 60 * 60;
@@ -42,7 +40,6 @@ describe("Kettle", () => {
   let testErc721: TestERC721;
   let testErc1155: TestERC1155;
   let testErc20: TestERC20;
-  let erc721Escrow: ERC721EscrowBase;
 
   let blockTimestamp: number;
 
@@ -55,8 +52,7 @@ describe("Kettle", () => {
       kettle,
       testErc721,
       testErc1155,
-      testErc20,
-      erc721Escrow,
+      testErc20
     } = await loadFixture(getFixture));
 
     blockTimestamp = await time.latest();
@@ -164,7 +160,7 @@ describe("Kettle", () => {
           async (receipt) => extractLien(receipt!, kettle)
         );
         
-        expect(await testErc721.ownerOf(tokenId1)).to.equal(await erc721Escrow.getAddress());
+        expect(await testErc721.ownerOf(tokenId1)).to.equal(await kettle.getAddress());
 
         const netLoanAmount = loanAmount * BigInt(9_750) / BigInt(10_000);
         expect(await testErc20.balanceOf(borrower)).to.equal(netLoanAmount);
@@ -239,8 +235,8 @@ describe("Kettle", () => {
           ADDRESS_ZERO
         );
 
-        expect(await testErc721.ownerOf(tokenId1)).to.equal(await erc721Escrow.getAddress());
-        expect(await testErc721.ownerOf(tokenId2)).to.equal(await erc721Escrow.getAddress());
+        expect(await testErc721.ownerOf(tokenId1)).to.equal(await kettle.getAddress());
+        expect(await testErc721.ownerOf(tokenId2)).to.equal(await kettle.getAddress());
 
         const netLoanAmount = loanAmount * BigInt(9_750) / BigInt(10_000);
 

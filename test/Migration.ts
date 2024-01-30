@@ -14,18 +14,19 @@ import {
   extractLien,
   extractLiens,
   generateMerkleRootForCollection,
-  generateMerkleProofForToken
+  generateMerkleProofForToken,
 } from "./helpers";
 
 import { CollateralType } from '../types/loanOffer';
-import { LienStruct, LoanOfferStruct, OfferAuthStruct } from "../typechain-types/contracts/Kettle";
+import { LoanOfferStruct, OfferAuthStruct } from "../typechain-types/contracts/Kettle";
 import {
   Kettle,
-  TestERC1155,
   TestERC20,
-  TestERC721
+  TestERC721,
+  TestERC1155,
+  Helpers,
+  CollateralVerifier
 } from "../typechain-types";
-import { LienPointer } from "../types";
 
 const DAY_SECONDS = 24 * 60 * 60;
 const ADDRESS_ZERO = "0x0000000000000000000000000000000000000000"
@@ -36,6 +37,9 @@ describe("Kettle", () => {
   let authSigner: Signer;
 
   let kettle: Kettle;
+  let helpers: Helpers;
+  let verifier: CollateralVerifier;
+
   let testErc721: TestERC721;
   let testErc1155: TestERC1155;
   let testErc20: TestERC20;
@@ -51,53 +55,51 @@ describe("Kettle", () => {
       testErc721,
       testErc1155,
       testErc20,
+      helpers,
+      verifier
     } = await loadFixture(getFixture));
 
     blockTimestamp = await time.latest();
   });
 
-  describe("Grace Period", () => {
+  describe("Borrow on current version and repay on new version", () => {
+
     const tokenId1 = 1;
     const tokenId2 = 2;
 
-    const token1Amount = 2;
-    const token2Amount = 2;
+    const tokenAmount1 = 2;
+    const tokenAmount2 = 2;
 
     const tokenIds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    const traitTokenIds = [2, 3];
+
     const collectionRoot = generateMerkleRootForCollection(tokenIds);
+    const traitRoot = generateMerkleRootForCollection(traitTokenIds);
 
-    let tokenOffer: LoanOfferStruct;
-    let collectionOffer: LoanOfferStruct;
-
-    let tokenSignature: string;
-    let collectionSignature: string;
-
-    let loanAmount: bigint;
-    let repaymentAmount: bigint;
-
-    let offerHash: string;
-    let collateralHash: string;
-    let offerAuth: OfferAuthStruct;
-    let authSignature: string;
+    const loanAmount = ethers.parseEther("10");
 
     beforeEach(async () => {
-      loanAmount = ethers.parseEther("10");
-
       await testErc721.mint(borrower, tokenId1);
       await testErc721.mint(borrower, tokenId2);
 
-      await testErc1155.mint(borrower, tokenId1, token1Amount);
-      await testErc1155.mint(borrower, tokenId2, token2Amount);
+      await testErc1155.mint(borrower, tokenId1, tokenAmount1);
+      await testErc1155.mint(borrower, tokenId2, tokenAmount2);
 
       await testErc20.mint(lender, loanAmount);
     });
 
-    describe("Single ERC721", () => {
-      let lien: LienStruct;
-      let lienId: bigint;
+    describe("collateralType === ERC721", () => {
+      let tokenOffer: LoanOfferStruct;
+      let offerSignature: string;
+
+      let offerHash: string;
+
+      let offerAuth: OfferAuthStruct;
+      let authSignature: string;
 
       beforeEach(async () => {
-        ({ offer: tokenOffer, offerSignature: tokenSignature, offerHash } = await prepareLoanOffer(
+
+        ({ offer: tokenOffer, offerSignature, offerHash } = await prepareLoanOffer(
           kettle,
           lender,
           {
@@ -129,56 +131,40 @@ describe("Kettle", () => {
             size: 1
           }
         ));
+      });
 
-        /* Start Loan */
+      it('should start loan on current version and repay on new version', async () => {
         const txn = await kettle.connect(borrower).borrow(
           tokenOffer,
           offerAuth,
-          tokenSignature,
+          offerSignature,
           authSignature,
           loanAmount,
           tokenId1,
           ADDRESS_ZERO,
-          []
+          [],
         );
 
-        ({ lien, lienId } = await txn.wait().then(
-          (receipt) => extractLien(receipt!, kettle)
-        ));
-
-        repaymentAmount = await kettle.getRepaymentAmount(
-          lien.amount,
-          lien.rate,
-          lien.duration
-        );
-  
-        await testErc20.mint(borrower, repaymentAmount - await testErc20.balanceOf(borrower.getAddress()));
-      });
-
-      it("lien should be expired until grace period is set", async () => {
-        expect(await kettle.getGracePeriodForLien(lienId)).to.equal(0);
-
-        // update block timestamp
-        await time.setNextBlockTimestamp(BigInt(lien.startTime) + BigInt(lien.duration) + BigInt(1));
-
-        // attempt repay in failure
-        await expect(kettle.connect(borrower).repay(
-          lien,
-          lienId
-        )).to.be.revertedWithCustomError(kettle, "LienIsDefaulted");
-
-        // set grace period for lien
-        await kettle.setGracePeriodForLien(lienId, DAY_SECONDS * 1);
-        expect(await kettle.getGracePeriodForLien(lienId)).to.equal(DAY_SECONDS * 1);
-
-        // attempt repay successfully
-        await kettle.connect(borrower).repay(
-          lien,
-          lienId
+        // extract lien and lien id
+        const { lien, lienId } = await txn.wait()
+          .then((receipt) => extractLien(receipt!, kettle)
         );
 
-        // grace period should be reset
-        expect(await kettle.getGracePeriodForLien(lienId)).to.equal(0);
+        expect(await testErc721.ownerOf(tokenId1)).to.equal(await kettle.getAddress());
+        expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
+
+        // expect correct lienId
+        expect(lienId).to.equal(0);
+
+        // create new kettle contract
+        const newKettle = await ethers.deployContract("Kettle", [0, authSigner, kettle], { 
+          libraries: { Helpers: helpers.target, CollateralVerifier: verifier.target },
+          gasLimit: 1e8 
+        });
+
+        // repay loan on new kettle contract
+
+
       });
     });
   });

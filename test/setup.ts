@@ -8,9 +8,7 @@ import {
   TestERC721, 
   TestERC1155, 
   Helpers, 
-  CollateralVerifier, 
-  ERC721EscrowBase, 
-  ERC1155EscrowBase,
+  CollateralVerifier
 } from "../typechain-types";
 
 export interface Fixture {
@@ -26,8 +24,6 @@ export interface Fixture {
   kettle: Kettle;
   helpers: Helpers;
   verifier: CollateralVerifier;
-  erc1155Escrow: ERC1155EscrowBase;
-  erc721Escrow: ERC721EscrowBase;
 }
 
 export async function getFixture(): Promise<Fixture> {
@@ -54,22 +50,22 @@ export async function getFixture(): Promise<Fixture> {
   await verifier.waitForDeployment();
 
   /* Deploy Kettle */
-  const kettle = await ethers.deployContract("Kettle", [authSigner], { 
+  const kettle = await ethers.deployContract("Kettle", [0, authSigner, "0x96152d223763790435a886db5dea3aeaa602e904"], { 
     libraries: { Helpers: helpers.target, CollateralVerifier: verifier.target },
     gasLimit: 1e8 
   });
 
-  /* Deploy ERC721 Escrow */
-  const erc721Escrow = await ethers.deployContract("ERC721EscrowBase", [kettle, testErc721.target]);
-  await erc721Escrow.waitForDeployment();
+  // /* Deploy ERC721 Escrow */
+  // const erc721Escrow = await ethers.deployContract("ERC721EscrowBase", [kettle, testErc721.target]);
+  // await erc721Escrow.waitForDeployment();
 
-  /* deploy ERC1155 Escrow */
-  const erc1155Escrow = await ethers.deployContract("ERC1155EscrowBase", [kettle, testErc1155.target]);
-  await erc1155Escrow.waitForDeployment();
+  // /* deploy ERC1155 Escrow */
+  // const erc1155Escrow = await ethers.deployContract("ERC1155EscrowBase", [kettle, testErc1155.target]);
+  // await erc1155Escrow.waitForDeployment();
 
-  /* Set Escrow */
-  await kettle.setEscrow(testErc721.getAddress(), erc721Escrow.getAddress());
-  await kettle.setEscrow(testErc1155.getAddress(), erc1155Escrow.getAddress());
+  // /* Set Escrow */
+  // await kettle.setEscrow(testErc721.getAddress(), erc721Escrow.getAddress());
+  // await kettle.setEscrow(testErc1155.getAddress(), erc1155Escrow.getAddress());
 
   /* Set Approvals */
   await testErc721.connect(borrower).setApprovalForAll(kettle, true);
@@ -86,8 +82,6 @@ export async function getFixture(): Promise<Fixture> {
   console.log("TestERC721:".padEnd(15), await testErc721.getAddress());
   console.log("TestERC1155:".padEnd(15), await testErc1155.getAddress());
   console.log("TestERC20:".padEnd(15), await testErc20.getAddress());
-  console.log("ERC721Escrow:".padEnd(15), await erc721Escrow.getAddress());
-  console.log("ERC1155Escrow:".padEnd(15), await erc1155Escrow.getAddress());
 
   console.log("\n------------------------ Wallets ------------------------");
   console.log("owner:".padEnd(15), await owner.getAddress());
@@ -107,7 +101,7 @@ export async function getFixture(): Promise<Fixture> {
     kettle,
     helpers,
     verifier,
-    erc721Escrow,
-    erc1155Escrow,
+    // erc721Escrow,
+    // erc1155Escrow,
   }
 };
