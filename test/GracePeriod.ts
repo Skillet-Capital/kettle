@@ -23,9 +23,7 @@ import {
   Kettle,
   TestERC1155,
   TestERC20,
-  TestERC721,
-  ERC1155EscrowBase,
-  ERC721EscrowBase
+  TestERC721
 } from "../typechain-types";
 import { LienPointer } from "../types";
 
@@ -94,7 +92,7 @@ describe("Kettle", () => {
       await testErc20.mint(lender, loanAmount);
     });
 
-    describe("Single ERC721 (With Custom Escrow)", () => {
+    describe("Single ERC721", () => {
       let lien: LienStruct;
       let lienId: bigint;
 

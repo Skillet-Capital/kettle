@@ -38,7 +38,6 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
     uint256 private _nextLienId;
 
     mapping(uint256 => bytes32) public liens;
-    mapping(address => address) public escrows;
     mapping(bytes32 => uint256) private _gracePeriod;
 
     uint256[50] private _gap;
@@ -58,19 +57,6 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
         return Helpers.computeCurrentDebt(amount, rate, duration);
     }
 
-    /// @notice get custom escrow address for collection
-    /// @dev if no escrow is set, return this contract address
-    /// @param collection collection address
-    /// @return escrow address
-    function getEscrow(
-        address collection
-    ) public view returns (address escrow) {
-        escrow = escrows[collection];
-        if (escrow == address(0)) {
-            return address(this);
-        }
-    }
-
     /// @notice return grace period given a lien id
     /// @dev grace periods are set per lien hash
     /// @dev if lien hash changes, grace period will default to 0
@@ -78,14 +64,6 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
     /// @return duration grace period duration
     function getGracePeriodForLien(uint256 lienId) public view returns (uint256 duration) {
         duration = _gracePeriod[liens[lienId]];
-    }
-
-    /// @notice set custom escrow address for collection (only owner can call this method)
-    /// @dev if no escrow is set, return this contract address
-    /// @param collection collection address
-    /// @param escrow escrow address
-    function setEscrow(address collection, address escrow) external onlyOwner {
-        escrows[collection] = escrow;
     }
 
     /// @notice set grace period for a lien id (only owner can call this method)
@@ -223,7 +201,7 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
             offer.collateralType, 
             offer.collection, 
             msg.sender, 
-            getEscrow(offer.collection), 
+            address(this), 
             tokenId, 
             offer.size
         );
@@ -342,7 +320,7 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
             offer.collateralType,
             offer.collection,
             offer.borrower,
-            getEscrow(offer.collection),
+            address(this),
             offer.tokenId,
             offer.size
         );
@@ -432,7 +410,7 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
         SafeTransfer.transfer(
             lien.collateralType,
             lien.collection,
-            getEscrow(lien.collection),
+            address(this),
             lien.borrower,
             lien.tokenId,
             lien.size
@@ -806,7 +784,7 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
             SafeTransfer.transfer(
                 lien.collateralType, 
                 lien.collection, 
-                getEscrow(lien.collection), 
+                address(this), 
                 lien.lender, 
                 lien.tokenId,
                 lien.size
