@@ -44,4 +44,14 @@ library Helpers {
     ) public pure returns (uint256) {
         return ((amount * rate) + _MILLI_BASIS_POINTS - 1) / _MILLI_BASIS_POINTS;
     }
+
+    function computeTotalFees(
+        uint256 amount,
+        Fee[] memory fees
+    ) public pure returns (uint256 totalFees) {
+        for (uint256 i = 0; i < fees.length; i++) {
+            totalFees = totalFees + computeFeeAmount(amount, fees[i].rate);
+        }
+        return totalFees;
+    }
 }

@@ -141,7 +141,6 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
             revert TotalFeeTooHigh();
         }
     }
-
     
     /// @notice Verifies and starts multiple liens against loan offers
     /// @param loanOffers Loan offers
@@ -550,15 +549,10 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
             lien.duration
         );
 
-        /// transfer fees 
-        /// caller of method must pay fees in order to refinance offer
-        /// fees are calculated based on the new loan amount
-        payFees(
-            offer.currency,
-            msg.sender,
-            amount,
-            offer.fees
-        );
+        uint256 totalFees = Helpers.computeTotalFees(amount, offer.fees);
+        if (totalFees > amount) {
+            revert TotalFeeTooHigh();
+        }
 
         /// if amount is greater than repayment amount
         /// transfer repayment amount from new lender to old lender (if different)
@@ -582,6 +576,14 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
                 SafeTransfer.transferERC20(offer.currency, lien.borrower, lien.lender, repayAmount - amount);
             }
         }
+
+        /// borrower pays origination fees on the new loan
+        payFees(
+            offer.currency, 
+            lien.borrower, 
+            amount, 
+            offer.fees
+        );
     }
 
     /// @notice Refinance and existing lien with new loan offer
