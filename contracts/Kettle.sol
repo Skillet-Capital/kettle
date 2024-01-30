@@ -192,7 +192,7 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
         uint256 tokenId,
         address borrower,
         bytes32[] calldata proof
-    ) public returns (uint256 lienId) {
+    ) public virtual returns (uint256 lienId) {
 
         /// set custom borrower
         if (borrower == address(0)) {
@@ -228,21 +228,13 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
             offer.size
         );
 
-        /// transfer fees from lender
-        uint256 totalFees = payFees(
-            offer.currency,
-            offer.lender,
-            amount,
-            offer.fees
-        );
-
         /// transfer net loan amount to borrower
         unchecked {
             SafeTransfer.transferERC20(
                 offer.currency, 
                 offer.lender,
                 borrower, 
-                amount - totalFees
+                amount
             );
         }
     }
@@ -327,7 +319,7 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
         OfferAuth calldata auth,
         bytes calldata offerSignature,
         bytes calldata authSignature
-    ) public returns (uint256 lienId) {
+    ) public virtual returns (uint256 lienId) {
 
         /// initiate loan
         lienId = _loan(
@@ -347,21 +339,13 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
             offer.size
         );
 
-        //// transfer fees from lender
-        uint256 totalFees = payFees(
-            offer.currency,
-            msg.sender,
-            offer.amount,
-            offer.fees
-        );
-
         //// transfer net loan amount to borrower
         unchecked {
             SafeTransfer.transferERC20(
                 offer.currency,
                 msg.sender,
                 offer.borrower,
-                offer.amount - totalFees
+                offer.amount
             );
         }
     }
@@ -522,7 +506,7 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
         bytes calldata offerSignature,
         bytes calldata authSignature,
         bytes32[] calldata proof
-    ) public validateLien(lien, lienId) lienIsActive(lien) {
+    ) public virtual validateLien(lien, lienId) lienIsActive(lien) {
 
         // caller must be borrower
         if (msg.sender != lien.borrower) {
@@ -680,57 +664,6 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
             newLien.duration,
             lien.rate,
             newLien.rate
-        );
-    }
-
-    function transferLien(
-        Lien calldata lien,
-        uint256 lienId,
-        TransferOffer calldata offer,
-        bytes calldata offerSignature
-    ) public 
-      validateLien(lien, lienId) 
-      lienIsActive(lien) 
-    {
-
-        // caller must be borrower
-        if (msg.sender != lien.lender) {
-            revert Unauthorized();
-        }
-
-        Lien memory newLien = Lien({
-            offerHash: lien.offerHash,
-            lender: offer.lender,
-            borrower: lien.borrower,
-            collateralType: lien.collateralType,
-            collection: lien.collection,
-            tokenId: lien.tokenId,
-            size: lien.size,
-            currency: lien.currency,
-            amount: lien.amount,
-            startTime: lien.startTime,
-            duration: lien.duration,
-            rate: lien.rate
-        });
-
-        /// store the lien in struct
-        unchecked {
-            liens[lienId] = keccak256(abi.encode(newLien));
-        }
-
-        // transfer amount to old lender
-        SafeTransfer.transferERC20(
-            lien.currency,
-            offer.lender,
-            lien.lender,
-            lien.amount
-        );
-
-        emit TransferLien(
-            lienId,
-            lien.lender,
-            offer.lender,
-            offer.amount
         );
     }
     

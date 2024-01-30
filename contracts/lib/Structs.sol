@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
+import { ERC20 } from "solmate/src/tokens/ERC20.sol";
+import { ERC721 } from "solmate/src/tokens/ERC721.sol";
+
 /*//////////////////////////////////////////////////
                 COLLATERAL TYPES
 //////////////////////////////////////////////////*/
@@ -43,6 +46,23 @@ struct Lien {
     uint256 startTime;
 }
 
+struct LienV3 {
+    address lender;
+    address borrower;
+    address currency;
+    uint8 collateralType;
+    address collection;
+    uint256 tokenId;
+    uint256 installments;
+    uint256 period;
+    uint256 rate;
+    uint256 amount;
+    uint256 defaultPeriod;
+    uint256 defaultRate;
+    uint256 startTime;
+    Fee[] fees;
+}
+
 /*//////////////////////////////////////////////////
                 LOAN OFFER STRUCTS
 //////////////////////////////////////////////////*/
@@ -61,6 +81,22 @@ struct LoanOffer {
     uint256 rate;
     uint256 salt;
     uint256 expiration;
+    Fee[] fees;
+}
+
+struct LoanOfferV3 {
+    address lender;
+    address currency;
+    uint8 collateralType;
+    address collection;
+    uint256 identifier;
+    uint256 size;
+    uint256 installments;
+    uint256 period;
+    uint256 rate;
+    uint256 amount;
+    uint256 defaultPeriod;
+    uint256 defaultRate;
     Fee[] fees;
 }
 
@@ -94,6 +130,22 @@ struct BorrowOffer {
     uint256 rate;
     uint256 salt;
     uint256 expiration;
+    Fee[] fees;
+}
+
+struct BorrowOfferV3 {
+    address borrower;
+    address currency;
+    uint8 collateralType;
+    address collection;
+    uint256 tokenId;
+    uint256 size;
+    uint256 installments;
+    uint256 period;
+    uint256 rate;
+    uint256 amount;
+    uint256 defaultPeriod;
+    uint256 defaultRate;
     Fee[] fees;
 }
 
