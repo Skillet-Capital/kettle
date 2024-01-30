@@ -10,8 +10,9 @@ import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { ContractTransactionReceipt } from "ethers"
 
 import { CollateralType } from "../types";
-import { Kettle } from "../typechain-types";
+import { Kettle, LendingEscrow } from "../typechain-types";
 import { BorrowOfferStruct, FeeStruct, LienStruct, LoanOfferStruct, RenegotiationOfferStruct, OfferAuthStruct } from '../typechain-types/contracts/Kettle';
+import { UpdateEscrowAuthStruct } from '../typechain-types/contracts/LendingEscrow';
 
 export interface LoanOfferParams {
   lender: Addressable;
@@ -540,4 +541,53 @@ export async function extractLiens(receipt: ContractTransactionReceipt, kettle: 
       }
     }
   );
+}
+
+export async function prepareUpdateEscrowAuth(
+  escrow: LendingEscrow,
+  signer: Signer,
+  lender: Addressable,
+  offerHash: string,
+  amount: number | bigint,
+  expiration: number,
+) {
+
+  const auth = {
+    lender: await lender.getAddress(),
+    offerHash,
+    amount,
+    expiration
+  }
+
+  const authSignature = await signUpdateEscrowAuth(
+    escrow,
+    signer,
+    auth
+  );
+
+  return { auth, authSignature }
+}
+
+export async function signUpdateEscrowAuth(
+  escrow: LendingEscrow,
+  signer: Signer,
+  auth: UpdateEscrowAuthStruct
+) {
+  const domain = {
+    name: 'LendingEscrow',
+    version: '1',
+    chainId: 1,
+    verifyingContract: await escrow.getAddress()
+  }
+
+  const types = {
+    UpdateEscrowAuth: [
+      { name: 'lender', type: 'address' },
+      { name: 'offerHash', type: 'bytes32' },
+      { name: 'amount', type: 'uint256' },
+      { name: 'expiration', type: 'uint256' }
+    ]
+  }
+
+  return await signer.signTypedData(domain, types, auth);
 }

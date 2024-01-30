@@ -5,7 +5,7 @@ import {
 } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
 import { ethers } from "hardhat";
-import { MaxUint256, Signer } from "ethers";
+import { Signer } from "ethers";
 
 import { getFixture } from './setup';
 import {

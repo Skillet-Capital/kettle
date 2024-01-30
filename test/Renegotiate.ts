@@ -7,11 +7,8 @@ import {
 import { ethers } from "hardhat";
 import { Signer } from "ethers";
 
-import { formatEther, parseEther } from "ethers";
-
 import { hexlify } from '@ethersproject/bytes';
 import { randomBytes } from '@ethersproject/random';
-import { Wallet } from "@ethersproject/wallet";
 
 import { getFixture } from './setup';
 import {
@@ -30,7 +27,6 @@ import {
   TestERC20,
   TestERC721
 } from "../typechain-types";
-import { LienPointer } from "../types";
 
 const DAY_SECONDS = 24 * 60 * 60;
 const MONTH_SECONDS = (DAY_SECONDS * 365) / 12;
@@ -146,6 +142,7 @@ describe("Kettle", () => {
         loanAmount,
         tokenId1,
         ADDRESS_ZERO,
+        false,
         []
       );
 

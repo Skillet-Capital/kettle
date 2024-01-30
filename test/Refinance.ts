@@ -144,6 +144,7 @@ describe("Kettle", () => {
           loanAmount,
           tokenId1,
           ADDRESS_ZERO,
+          false,
           []
         );
 
@@ -790,6 +791,7 @@ describe("Kettle", () => {
               offerIndex: 0,
               amount: ethers.parseEther("5"),
               tokenId: 1,
+              useEscrow: false,
               proof: proof1,
               auth: offerAuth,
               authSignature
@@ -798,6 +800,7 @@ describe("Kettle", () => {
               offerIndex: 0,
               amount: ethers.parseEther("5"),
               tokenId: 2,
+              useEscrow: false,
               proof: proof2,
               auth: offerAuth2,
               authSignature: authSignature2
@@ -1445,6 +1448,7 @@ describe("Kettle", () => {
           loanAmount,
           tokenId1,
           ADDRESS_ZERO,
+          false,
           []
         );
 
@@ -1634,6 +1638,7 @@ describe("Kettle", () => {
               offerIndex: 0,
               amount: ethers.parseEther("5"),
               tokenId: tokenId1,
+              useEscrow: false,
               proof: proof1,
               auth: offerAuth,
               authSignature
@@ -1642,6 +1647,7 @@ describe("Kettle", () => {
               offerIndex: 0,
               amount: ethers.parseEther("5"),
               tokenId: tokenId2,
+              useEscrow: false,
               proof: proof2,
               auth: offerAuth2,
               authSignature: authSignature2
