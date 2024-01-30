@@ -13,6 +13,8 @@ import { Signatures } from "./lib/Signatures.sol";
 import { OfferController } from "./OfferController.sol";
 import { IKettle } from "./interfaces/IKettle.sol";
 
+import { ILendingEscrow } from "./interfaces/ILendingEscrow.sol";
+
 import { CollateralType, Fee, Lien, LoanOffer, BorrowOffer, RenegotiationOffer, LoanOfferInput, BorrowOfferInput, LienPointer, LoanFullfillment, BorrowFullfillment, RepayFullfillment, RefinanceFullfillment, OfferAuth } from "./lib/Structs.sol";
 
 import { InvalidLien, Unauthorized, LienIsDefaulted, LienNotDefaulted, CollectionsDoNotMatch, CurrenciesDoNotMatch, NoEscrowImplementation, InvalidCollateralSize, InvalidCollateralType, TotalFeeTooHigh, InvalidLienHash, LienIdMismatch, InvalidDuration, LendersDoNotMatch } from "./lib/Errors.sol";
@@ -36,6 +38,7 @@ import { InvalidLien, Unauthorized, LienIsDefaulted, LienNotDefaulted, Collectio
 
 contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, ERC721Holder, ERC1155Holder {
     uint256 private _nextLienId;
+    address public immutable _lendingEscrow;
 
     mapping(uint256 => bytes32) public liens;
     mapping(address => address) public escrows;
@@ -43,7 +46,12 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
 
     uint256[50] private _gap;
 
-    constructor(address authSigner) OfferController(authSigner) { }
+    constructor(
+        address authSigner,
+        address lendingEscrow
+    ) OfferController(authSigner) { 
+        _lendingEscrow = lendingEscrow;
+    }
 
     /// @notice calculate repayment amount given amount, rate, and duration
     /// @param amount loan amount
@@ -168,6 +176,7 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
                 fullfillment.amount,
                 fullfillment.tokenId,
                 borrower,
+                false,
                 fullfillment.proof
             );
         }
@@ -191,6 +200,7 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
         uint256 amount,
         uint256 tokenId,
         address borrower,
+        bool fromEscrow,
         bytes32[] calldata proof
     ) public returns (uint256 lienId) {
 
@@ -218,6 +228,16 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
             borrower
         );
 
+        /// if from escrow, transfer total amount to contract
+        /// use contract as source of funds (does not require borrower approvals)
+        address lendingSource = offer.lender;
+        if (fromEscrow) {
+            lendingSource = address(this);
+
+            bytes32 offerHash = _hashLoanOffer(offer);
+            ILendingEscrow(_lendingEscrow).useEscrow(offerHash);
+        }
+
         /// transfer collateral from borrower to escrow
         SafeTransfer.transfer(
             offer.collateralType, 
@@ -231,7 +251,7 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
         /// transfer fees from lender
         uint256 totalFees = payFees(
             offer.currency,
-            offer.lender,
+            lendingSource,
             amount,
             offer.fees
         );
@@ -240,7 +260,7 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
         unchecked {
             SafeTransfer.transferERC20(
                 offer.currency, 
-                offer.lender,
+                lendingSource,
                 borrower, 
                 amount - totalFees
             );
