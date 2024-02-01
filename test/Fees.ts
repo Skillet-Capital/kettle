@@ -11,9 +11,6 @@ import { getFixture } from './setup';
 import { 
   prepareLoanOffer,
   extractLien,
-  signLoanOffer,
-  hashCollateral,
-  signOfferAuth,
   prepareLoanOfferAuth
 } from "./helpers";
 
@@ -23,8 +20,7 @@ import {
   Kettle, 
   TestERC20, 
   TestERC721, 
-  TestERC1155,
-  CollateralVerifier
+  TestERC1155
 } from "../typechain-types";
 
 const DAY_SECONDS = 24 * 60 * 60;
@@ -152,6 +148,7 @@ describe("Kettle", () => {
           loanAmount, 
           1,
           ADDRESS_ZERO,
+          false,
           [],
         );
 
@@ -219,6 +216,7 @@ describe("Kettle", () => {
               offerIndex: 0,
               amount: ethers.parseEther("5"),
               tokenId: 1,
+              useEscrow: false,
               proof: [],
               auth: offerAuth,
               authSignature: authSignature
@@ -227,6 +225,7 @@ describe("Kettle", () => {
               offerIndex: 1,
               amount: ethers.parseEther("5"),
               tokenId: 2,
+              useEscrow: false,
               proof: [],
               auth: offerAuth2,
               authSignature: authSignature2
@@ -294,6 +293,7 @@ describe("Kettle", () => {
           loanAmount, 
           tokenId2,
           ADDRESS_ZERO,
+          false,
           [],
         )).to.be.revertedWithCustomError(kettle, "TotalFeeTooHigh")
       });

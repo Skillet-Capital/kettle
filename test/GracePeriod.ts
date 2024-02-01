@@ -12,9 +12,7 @@ import {
   prepareLoanOffer,
   prepareLoanOfferAuth,
   extractLien,
-  extractLiens,
-  generateMerkleRootForCollection,
-  generateMerkleProofForToken
+  generateMerkleRootForCollection
 } from "./helpers";
 
 import { CollateralType } from '../types/loanOffer';
@@ -139,6 +137,7 @@ describe("Kettle", () => {
           loanAmount,
           tokenId1,
           ADDRESS_ZERO,
+          false,
           []
         );
 

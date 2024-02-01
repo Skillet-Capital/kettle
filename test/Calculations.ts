@@ -22,12 +22,8 @@ import {
   Kettle,
   TestERC1155,
   TestERC20,
-  TestERC721,
-  ERC721EscrowBase,
-  ERC1155EscrowBase,
-  CollateralVerifier
+  TestERC721
 } from "../typechain-types";
-import { LienPointer } from "../types";
 
 const DAY_SECONDS = 24 * 60 * 60;
 const ADDRESS_ZERO = "0x0000000000000000000000000000000000000000";
@@ -143,6 +139,7 @@ describe("Kettle", () => {
         loanAmount,
         tokenId1,
         ADDRESS_ZERO,
+        false,
         []
       );
 

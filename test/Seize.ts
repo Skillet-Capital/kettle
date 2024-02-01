@@ -140,6 +140,7 @@ describe("Kettle", () => {
           loanAmount,
           tokenId1,
           ADDRESS_ZERO,
+          false,
           []
         );
 
@@ -227,6 +228,7 @@ describe("Kettle", () => {
           loanAmount,
           tokenId1,
           ADDRESS_ZERO,
+          false,
           []
         );
 
@@ -336,6 +338,7 @@ describe("Kettle", () => {
               amount: ethers.parseEther("5"),
               tokenId: tokenId1,
               proof: proof1,
+              useEscrow: false,
               auth: offerAuth,
               authSignature
             },
@@ -344,6 +347,7 @@ describe("Kettle", () => {
               amount: ethers.parseEther("5"),
               tokenId: tokenId2,
               proof: proof2,
+              useEscrow: false,
               auth: offerAuth2,
               authSignature: authSignature2
             }

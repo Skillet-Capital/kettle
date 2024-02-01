@@ -30,8 +30,6 @@ import {
   TestERC1155,
   TestERC20,
   TestERC721,
-  ERC721EscrowBase,
-  ERC1155EscrowBase,
   CollateralVerifier
 } from "../typechain-types";
 import { LienPointer } from "../types";
@@ -50,10 +48,6 @@ describe("Kettle", () => {
   let testErc1155: TestERC1155;
   let testErc20: TestERC20;
 
-  let verifier: CollateralVerifier;
-  let erc721Escrow: ERC721EscrowBase;
-  let erc1155Escrow: ERC1155EscrowBase;
-
   let blockTimestamp: number;
 
   beforeEach(async () => {
@@ -65,10 +59,7 @@ describe("Kettle", () => {
       kettle,
       testErc721,
       testErc1155,
-      testErc20,
-      erc721Escrow,
-      erc1155Escrow,
-      verifier
+      testErc20
     } = await loadFixture(getFixture));
 
     blockTimestamp = await time.latest();
@@ -162,6 +153,7 @@ describe("Kettle", () => {
           loanAmount,
           tokenId1,
           ADDRESS_ZERO,
+          false,
           []
         );
 
@@ -334,6 +326,7 @@ describe("Kettle", () => {
           loanAmount,
           tokenId1,
           ADDRESS_ZERO,
+          false,
           []
         );
 
@@ -514,6 +507,7 @@ describe("Kettle", () => {
           loanAmount,
           tokenId1,
           ADDRESS_ZERO,
+          false,
           []
         );
 

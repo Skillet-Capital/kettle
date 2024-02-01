@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ERC721Holder } from "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import { ERC1155Holder } from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
@@ -12,6 +13,8 @@ import { SafeTransfer } from "./SafeTransfer.sol";
 import { Signatures } from "./lib/Signatures.sol";
 import { OfferController } from "./OfferController.sol";
 import { IKettle } from "./interfaces/IKettle.sol";
+
+import { ILendingEscrow } from "./interfaces/ILendingEscrow.sol";
 
 import { CollateralType, Fee, Lien, LoanOffer, BorrowOffer, RenegotiationOffer, LoanOfferInput, BorrowOfferInput, LienPointer, LoanFullfillment, BorrowFullfillment, RepayFullfillment, RefinanceFullfillment, OfferAuth } from "./lib/Structs.sol";
 
@@ -36,13 +39,19 @@ import { InvalidLien, Unauthorized, LienIsDefaulted, LienNotDefaulted, Collectio
 
 contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, ERC721Holder, ERC1155Holder {
     uint256 private _nextLienId;
+    address public immutable _lendingEscrow;
 
     mapping(uint256 => bytes32) public liens;
     mapping(bytes32 => uint256) private _gracePeriod;
 
     uint256[50] private _gap;
 
-    constructor(address authSigner) OfferController(authSigner) { }
+    constructor(
+        address authSigner,
+        address lendingEscrow
+    ) OfferController(authSigner) { 
+        _lendingEscrow = lendingEscrow;
+    }
 
     /// @notice calculate repayment amount given amount, rate, and duration
     /// @param amount loan amount
@@ -102,12 +111,16 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
                 fees[i].rate
             );
 
-            SafeTransfer.transferERC20(
-                currency, 
-                payer, 
-                fees[i].recipient, 
-                feeAmount
-            );
+            if (payer == address(this)) {
+                IERC20(currency).transfer(fees[i].recipient, feeAmount);
+            } else {
+                SafeTransfer.transferERC20(
+                    currency, 
+                    payer, 
+                    fees[i].recipient, 
+                    feeAmount
+                );
+            }
 
             unchecked {
                 totalFees += feeAmount;
@@ -119,7 +132,6 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
             revert TotalFeeTooHigh();
         }
     }
-
     
     /// @notice Verifies and starts multiple liens against loan offers
     /// @param loanOffers Loan offers
@@ -146,6 +158,7 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
                 fullfillment.amount,
                 fullfillment.tokenId,
                 borrower,
+                fullfillment.useEscrow,
                 fullfillment.proof
             );
         }
@@ -169,6 +182,7 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
         uint256 amount,
         uint256 tokenId,
         address borrower,
+        bool useEscrow,
         bytes32[] calldata proof
     ) public returns (uint256 lienId) {
 
@@ -199,29 +213,43 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
         /// transfer collateral from borrower to escrow
         SafeTransfer.transfer(
             offer.collateralType, 
-            offer.collection, 
+            offer.collection,
             msg.sender, 
             address(this), 
-            tokenId, 
+            tokenId,
             offer.size
         );
+
+        /// if from escrow, transfer total amount to contract
+        /// use contract as source of funds (does not require borrower approvals)
+        address lendingSource = offer.lender;
+        if (useEscrow) {
+            lendingSource = address(this);
+
+            bytes32 offerHash = _hashLoanOffer(offer);
+            ILendingEscrow(_lendingEscrow).useEscrow(offerHash, amount);
+        }
 
         /// transfer fees from lender
         uint256 totalFees = payFees(
             offer.currency,
-            offer.lender,
+            lendingSource,
             amount,
             offer.fees
         );
 
         /// transfer net loan amount to borrower
         unchecked {
-            SafeTransfer.transferERC20(
-                offer.currency, 
-                offer.lender,
-                borrower, 
-                amount - totalFees
-            );
+            if (lendingSource == address(this)) {
+                IERC20(offer.currency).transfer(borrower, amount - totalFees);
+            } else {
+                SafeTransfer.transferERC20(
+                    offer.currency, 
+                    lendingSource,
+                    borrower, 
+                    amount - totalFees
+                );
+            }
         }
     }
 
@@ -528,15 +556,10 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
             lien.duration
         );
 
-        /// transfer fees 
-        /// caller of method must pay fees in order to refinance offer
-        /// fees are calculated based on the new loan amount
-        payFees(
-            offer.currency,
-            msg.sender,
-            amount,
-            offer.fees
-        );
+        uint256 totalFees = Helpers.computeTotalFees(amount, offer.fees);
+        if (totalFees > amount) {
+            revert TotalFeeTooHigh();
+        }
 
         /// if amount is greater than repayment amount
         /// transfer repayment amount from new lender to old lender (if different)
@@ -560,6 +583,14 @@ contract Kettle is IKettle, Ownable, Signatures, OfferController, SafeTransfer, 
                 SafeTransfer.transferERC20(offer.currency, lien.borrower, lien.lender, repayAmount - amount);
             }
         }
+
+        /// borrower pays origination fees on the new loan
+        payFees(
+            offer.currency, 
+            lien.borrower, 
+            amount, 
+            offer.fees
+        );
     }
 
     /// @notice Refinance and existing lien with new loan offer

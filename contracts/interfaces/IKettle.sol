@@ -58,6 +58,7 @@ interface IKettle is IOfferController {
         uint256 loanAmount,
         uint256 collateralTokenId,
         address borrower,
+        bool fromEscrow,
         bytes32[] calldata proof
     ) external returns (uint256 lienId);
 

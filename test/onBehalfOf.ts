@@ -131,6 +131,7 @@ describe("Kettle", () => {
           loanAmount,
           1,
           onBehalfOf,
+          false,
           [],
         );
 
@@ -208,6 +209,7 @@ describe("Kettle", () => {
               offerIndex: 0,
               amount: ethers.parseEther("5"),
               tokenId: 1,
+              useEscrow: false,
               auth: offerAuth,
               authSignature,
               proof: []
@@ -216,6 +218,7 @@ describe("Kettle", () => {
               offerIndex: 1,
               amount: ethers.parseEther("5"),
               tokenId: 2,
+              useEscrow: false,
               auth: offerAuth2,
               authSignature: authSignature2,
               proof: []
