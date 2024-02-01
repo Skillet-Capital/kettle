@@ -29,7 +29,7 @@ export interface Fixture {
 }
 
 export async function getFixture(): Promise<Fixture> {
-  const [owner, borrower, lender, authSigner, feeRecipient, ...signers] = await ethers.getSigners();
+  const [owner, borrower, lender, authSigner, feeRecipient, rebateFunder, ...signers] = await ethers.getSigners();
 
   /* Deploy TestERC721 */
   const testErc721 = await ethers.deployContract("TestERC721");
@@ -52,7 +52,7 @@ export async function getFixture(): Promise<Fixture> {
   await verifier.waitForDeployment();
 
   /* Deploy Lending Escrow */
-  const escrow = await ethers.deployContract("LendingEscrow", [authSigner]);
+  const escrow = await ethers.deployContract("LendingEscrow", [authSigner, rebateFunder]);
   await escrow.waitForDeployment();
 
   /* Deploy Kettle */
