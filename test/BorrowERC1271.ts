@@ -26,7 +26,8 @@ import {
   TestERC20,
   TestERC721,
   TestERC1155,
-  ERC1271WalletMock
+  ERC1271WalletMock,
+  ERC1271MaliciousMock
 } from "../typechain-types";
 
 const DAY_SECONDS = 24 * 60 * 60;
@@ -80,7 +81,7 @@ describe("Kettle", () => {
       await testErc20.mint(lender, loanAmount);
     });
 
-    describe("ERC721", () => {
+    describe("ERC1271", () => {
       let signer: Signer;
       let signerContract: ERC1271WalletMock;
 
@@ -155,11 +156,12 @@ describe("Kettle", () => {
   
           expect(await testErc721.ownerOf(tokenId1)).to.equal(await kettle.getAddress());
           expect(await testErc20.balanceOf(borrower)).to.equal(loanAmount);
+          expect(await testErc20.balanceOf(signerContract)).to.equal(0);
   
           // expect correct lienId
           expect(lienId).to.equal(0);
         });
       });
-    })
+    });
   });
 });
