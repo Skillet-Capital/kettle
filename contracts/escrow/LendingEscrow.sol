@@ -7,10 +7,14 @@ import { SafeTransfer } from "../SafeTransfer.sol";
 import { Signatures } from "./Signatures.sol";
 import { ILendingEscrow } from "../interfaces/ILendingEscrow.sol";
 
+import { SafeTransfer } from "../SafeTransfer.sol";
+
 import { EscrowFunds, UpdateEscrowAuth } from "../lib/Structs.sol";
 
 contract LendingEscrow is ILendingEscrow, SafeTransfer, Signatures {
     address public _authSigner;
+    address public _rebateFunder;
+    address public _rebateCurrency;
 
     uint256 private immutable ADMIN_ROLE = 0;
     uint256 private immutable ESCROW_ROUTER_ROLE = 1;
@@ -26,8 +30,9 @@ contract LendingEscrow is ILendingEscrow, SafeTransfer, Signatures {
     error InsufficientFunds();
     error Unauthorized();
 
-    constructor(address signer) {
+    constructor(address signer, address rebateFunder) {
         _authSigner = signer;
+        _rebateFunder = rebateFunder;
 
         _roles[ADMIN_ROLE][msg.sender] = 1;
         _roles[ESCROW_WITHDRAWER_ROLE][msg.sender] = 1;
@@ -35,6 +40,14 @@ contract LendingEscrow is ILendingEscrow, SafeTransfer, Signatures {
 
     function updateSigner(address signer) public requiresRole(ADMIN_ROLE) {
         _authSigner = signer;
+    }
+
+    function updateRebateFunder(address rebateFunder) public requiresRole(ADMIN_ROLE) {
+        _rebateFunder = rebateFunder;
+    }
+
+    function updateRebateCurrency(address rebateCurrency) public requiresRole(ADMIN_ROLE) {
+        _rebateCurrency = rebateCurrency;
     }
 
     function setRole(uint256 role, address account, uint256 value) public requiresRole(ADMIN_ROLE) {
@@ -178,7 +191,7 @@ contract LendingEscrow is ILendingEscrow, SafeTransfer, Signatures {
     /// @notice Return escrow to lender
     /// callable only by escrow withdrawer role
     /// @param offerHash identifier of escrow to return
-    function returnEscrow(bytes32 offerHash) public requiresRole(ESCROW_WITHDRAWER_ROLE) {
+    function returnEscrow(bytes32 offerHash, uint256 rebate) public requiresRole(ESCROW_WITHDRAWER_ROLE) {
         EscrowFunds memory escrow = escrowFunds[offerHash];
 
         // send funds to lender from escrow
@@ -186,6 +199,16 @@ contract LendingEscrow is ILendingEscrow, SafeTransfer, Signatures {
             escrow.lender,
             escrow.amount
         );
+
+        // if rebate, send rebate amount from rebateFunder
+        if (rebate > 0) {
+            SafeTransfer.transferERC20(
+                _rebateCurrency, 
+                _rebateFunder, 
+                escrow.lender, 
+                rebate
+            );
+        }
 
         delete escrowFunds[offerHash];
 
