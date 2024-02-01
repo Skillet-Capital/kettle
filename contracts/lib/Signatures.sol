@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
+import { IERC1271 } from "@openzeppelin/contracts/interfaces/IERC1271.sol";
+
 import { Fee, LoanOffer, BorrowOffer, OfferAuth, Collateral, RenegotiationOffer } from "./Structs.sol";
 import { InvalidVParameter, InvalidSignature } from "./Errors.sol";
 import { ISignatures } from "../interfaces/ISignatures.sol";
@@ -339,6 +342,19 @@ abstract contract Signatures is ISignatures {
         bytes32 s;
         uint8 v;
 
+        if (Address.isContract(signer)) {
+            bytes4 magicValue = IERC1271(signer).isValidSignature(
+                hashToSign,
+                signature
+            );
+
+            if (magicValue != IERC1271(signer).isValidSignature.selector) {
+                revert InvalidSignature();
+            }
+
+            return;
+        }
+
         // solhint-disable-next-line
         assembly {
             r := calldataload(signature.offset)
@@ -347,7 +363,6 @@ abstract contract Signatures is ISignatures {
         }
         _verify(signer, hashToSign, v, r, s);
     }
-    
 
     /**
      * @notice Verify signature of digest
